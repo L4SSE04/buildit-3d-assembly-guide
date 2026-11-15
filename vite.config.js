@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    strictPort: true, // never move to 5174 quietly: a second copy running is a mistake to fix, not to work around
     proxy: { '/api': { target: 'http://localhost:8787', changeOrigin: true } }
   },
   build: {

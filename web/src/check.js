@@ -45,13 +45,24 @@ export function checkGuide(g) {
   const inside = (b, pt, tol = 0.5) => (b.shaped ? b.boxes.some(bx => inBox(bx, pt, tol)) : b.exact && inBox(b, pt, tol));
   const gap = (a, b) => Math.max(...[0, 1, 2].map(k => Math.max(a.min[k], b.min[k]) - Math.min(a.max[k], b.max[k])));
   const boardAt = (pt, skip, tol) => boards.find(b => b !== skip && inside(b, pt, tol));
+  // for a screw that misses: what is around it, so the repair knows which way to move it
+  const missHint = (world, back, b, len) => {
+    for (let t = 0; t <= 10; t++) { const o = boardAt(add(world, scale(back, -t)), b); if (o) return ` It points at ${o.p.key} instead: turn it round, or put it on the far side of ${o.p.key}.`; }
+    for (let t = 2; t <= 300; t += 2) { const o = boardAt(add(world, scale(back, t)), b); if (o) return ` The next part behind it, ${o.p.key}, is ${t} mm away${len ? ` and it is ${len} mm long` : ''}.`; }
+    return '';
+  };
 
   // ---- inventory: boards
   for (const [id, part] of Object.entries(P)) {
     if (part.kind !== PANEL) continue;
     const n = g.panels.filter(p => p.part === id).length;
     if (n !== part.qty) say('error', 'board-count', null, `${nm(id)}: the parts list says ${part.qty}, but the 3D model has ${n}.`, [id]);
-    if (part.shape) continue;
+    if (part.shape) {
+      // several thin boxes in one part: probably boards that come separately in the box (a drawer drawn as one finished box)
+      const boards = part.shape.filter(q => q.type === 'box' && Math.min(...q.size) <= 25 && Math.max(...q.size) >= 150);
+      if (boards.length >= 3) say('warn', 'merged-boards', null, `${nm(id)} is drawn as ${boards.length} boards in one part. If they come as separate boards in the box, give each board its own part and panel, so the steps that join them can be shown.`, [id]);
+      continue;
+    }
     if (!part.size_mm) say('warn', 'board-size', null, `${nm(id)} has no size. It is drawn as a small cube.`, [id]);
     else {
       const t = Math.min(...part.size_mm);
@@ -101,18 +112,42 @@ export function checkGuide(g) {
   // ---- inventory: hardware
   const placed = {};
   g.hardware.forEach(h => (placed[h.part] = (placed[h.part] || 0) + 1));
+  const usedIn = id => g.steps.map((st, i) => (st.need.some(([n]) => n === id) ? i + 1 : 0)).filter(Boolean);
+  const FIXINGS = ['dowel', 'cam_screw', 'cam_lock', 'nail', 'shelf_pin', 'screw', 'bolt', 'allen_bolt', 'washer', 'nut', 'bracket', 'knob', 'foot', 'cap'];
   for (const [id, part] of Object.entries(P)) {
     if (part.kind === PANEL) continue;
-    const n = placed[id] || 0;
+    const n = placed[id] || 0, steps = usedIn(id);
+    // no name and no kind: the reader cannot tell what it is, and the viewer draws a plain block
+    if (part.name === 'Part' && part.kind === 'other') say('error', 'part-unknown', steps[0] ?? null, `Part ${id} has no name or kind in the parts list${steps.length ? ` (it is used in step ${steps.join(', ')})` : ''}.`, [id]);
+    else if (part.kind === 'other' && !part.shape && n > 0) say('info', 'part-block', null, `${nm(id)} is drawn as a plain block: give it a kind (knob, foot, cap, ...) or a "shape".`, [id]);
     if (n > part.qty) say('error', 'hw-count', null, `${nm(id)}: the parts list says ${part.qty}, but the 3D model uses ${n}.`, [id]);
+    else if (n === 0 && part.qty > 1 && steps.length && FIXINGS.includes(part.kind))
+      say('warn', 'hw-unplaced', steps[0], `${nm(id)}: ${part.qty} are used in step ${steps.join(', ')}, but none are shown in the 3D model.`, [id]);
     else if (n === 0 && part.qty > 0) say('info', 'hw-unplaced', null, `${nm(id)} is not shown in the 3D model.`, [id]);
     else if (n < part.qty) say('info', 'hw-spare', null, `${nm(id)}: ${part.qty - n} of ${part.qty} are not used in the 3D model (spares?).`, [id]);
   }
 
   // ---- each piece of hardware
   const seen = [];
+  // a head that sits inside another part cannot be fitted (and cannot be seen): a cap or bolt head buried in a cushion
+  const buriedIn = (pt, own) => boards.find(o => o !== own && [0, 1, 2].every(i => pt[i] > o.min[i] - 1 && pt[i] < o.max[i] + 1) &&
+    (o.shaped || !o.exact ? solid(o).prims.some(q => q.sdf && q.sdf(solid(o).toLocal(pt)) < -2) : inBox(o, pt, -2)));
+  const HEADS = ['screw', 'bolt', 'allen_bolt', 'cap', 'knob', 'foot'];
   const camLocks = g.hardware.filter(h => P[h.part].kind === 'cam_lock' && byKey[h.panel]);
   const usedLocks = new Set();
+  // a cam lock in the receiving board should sit on the screw's line, 12–60 mm in
+  const pairLock = (h, label, world, d, into) => {
+    const lock = camLocks.find(l => {
+      if (l.panel !== into.p.key || usedLocks.has(l.key)) return false;
+      const lb = byKey[l.panel], la = l.at.slice(), [lax, ls] = AX[l.dir];
+      if (!lb.shaped) la[lax] = ls * lb.size[lax] / 2;
+      const q = sub(lb.toWorld(la), world), t = dot(q, d), ld = lb.dirWorld(l.dir);
+      const lat = sub(sub(q, scale(d, t)), scale(ld, dot(q, ld)));
+      return t > 12 && t < 60 && Math.hypot(...lat) < 8;
+    });
+    if (lock) usedLocks.add(lock.key);
+    else if (camLocks.length) say('warn', 'cam-unpaired', h.step, `A ${label} has no cam lock in board ${into.p.key} to grab it.`, [h.key]);
+  };
   for (const h of g.hardware) {
     const b = byKey[h.panel], kind = P[h.part].kind;
     if (!b) continue;
@@ -121,7 +156,9 @@ export function checkGuide(g) {
     const label = `${P[h.part].name} on board ${h.panel}`;
     if (h.turn_step != null && h.turn_step < h.step) say('error', 'turn-order', h.turn_step, `A ${label} is turned before it goes in.`, [h.key]);
     if (kind === 'cam_lock' && h.turn_step == null) say('warn', 'turn-missing', h.step, `A ${label} is never turned.`, [h.key]);
-    const stacks = kind === 'washer' || kind === 'nut' || kind === 'other'; // these sit on another fixing by design (cover caps too)
+    const stacks = ['washer', 'nut', 'cap', 'knob', 'other'].includes(kind); // these sit on another fixing by design (a cap on a bolt head, a knob on its screw)
+    // a screw next to a bracket on the same board holds that bracket: it only has to go into this board
+    const holdsBracket = ['screw', 'nail'].includes(kind) && g.hardware.some(o => o !== h && o.panel === h.panel && P[o.part].kind === 'bracket' && Math.hypot(...sub(o.at, h.at)) < 40);
 
     if (b.shaped) {
       // on a shaped part: the point must be on (or very near) one of its pieces
@@ -130,12 +167,14 @@ export function checkGuide(g) {
       const world = b.toWorld(h.at), d = b.dirWorld(h.dir);
       if (!stacks && seen.some(o => o.panel === h.panel && !o.stacks && Math.hypot(...sub(o.world, world)) < 4)) say('error', 'hw-double', h.step, `Two pieces of hardware sit in the same spot on part ${h.panel}.`, [h.key]);
       seen.push({ panel: h.panel, world, stacks });
-      if (['screw', 'bolt', 'allen_bolt', 'nail', 'dowel', 'cam_screw'].includes(kind)) {
+      if (HEADS.includes(kind)) { const o = buriedIn(add(world, scale(d, 3)), b); if (o) say('warn', 'hw-buried', h.step, `A ${label} sits inside ${o.p.key}: it cannot be fitted there and is hidden in the 3D view.`, [h.key]); }
+      if (['screw', 'bolt', 'allen_bolt', 'nail', 'dowel', 'cam_screw'].includes(kind) && !holdsBracket) {
         // it should reach another part: forwards for pegs, backwards (through this part) for screws and bolts
         const sign = kind === 'dowel' || kind === 'cam_screw' ? 1 : -1;
         let hit = null;
         for (let t = 2; t <= 90 && !hit; t += 2) hit = boardAt(add(world, scale(d, sign * t)), b);
-        if (!hit) say('warn', 'hw-no-partner', h.step, `A ${label} does not reach another part.`, [h.key]);
+        if (!hit) say('warn', 'hw-no-partner', h.step, `A ${label} does not reach another part.${sign < 0 ? missHint(world, scale(d, -1), b, P[h.part].len_mm) : ''}`, [h.key]);
+        else if (kind === 'cam_screw') pairLock(h, label, world, d, hit);
       }
       continue;
     }
@@ -149,28 +188,18 @@ export function checkGuide(g) {
     const world = b.toWorld(at), d = b.dirWorld(h.dir);
     if (!stacks && seen.some(o => o.panel === h.panel && !o.stacks && Math.hypot(...sub(o.world, world)) < 4)) say('error', 'hw-double', h.step, `Two pieces of hardware sit in the same spot on board ${h.panel}.`, [h.key]);
     seen.push({ panel: h.panel, world, stacks });
+    if (HEADS.includes(kind)) { const o = buriedIn(add(world, scale(d, 3)), b); if (o) say('warn', 'hw-buried', h.step, `A ${label} sits inside ${o.p.key}: it cannot be fitted there and is hidden in the 3D view.`, [h.key]); }
     if (!b.exact) continue;
 
     // does it reach the board it is meant to join?
     if (kind === 'dowel' || kind === 'cam_screw') {
       const into = boardAt(add(world, scale(d, 6)), b);
       if (!into) say('warn', 'hw-no-partner', h.step, `A ${label} does not point into another board.`, [h.key]);
-      else if (kind === 'cam_screw') {
-        // a cam lock in the receiving board should sit on the screw's line, 15–60 mm in
-        const lock = camLocks.find(l => {
-          if (l.panel !== into.p.key || usedLocks.has(l.key)) return false;
-          const lb = byKey[l.panel], la = l.at.slice(), [lax, ls] = AX[l.dir]; la[lax] = ls * lb.size[lax] / 2;
-          const q = sub(lb.toWorld(la), world), t = dot(q, d), ld = lb.dirWorld(l.dir);
-          const lat = sub(sub(q, scale(d, t)), scale(ld, dot(q, ld)));
-          return t > 12 && t < 60 && Math.hypot(...lat) < 8;
-        });
-        if (lock) usedLocks.add(lock.key);
-        else if (camLocks.length) say('warn', 'cam-unpaired', h.step, `A ${label} has no cam lock in board ${into.p.key} to grab it.`, [h.key]);
-      }
-    } else if (kind === 'nail' || kind === 'screw' || kind === 'bolt' || kind === 'allen_bolt') {
+      else if (kind === 'cam_screw') pairLock(h, label, world, d, into);
+    } else if ((kind === 'nail' || kind === 'screw' || kind === 'bolt' || kind === 'allen_bolt') && !holdsBracket) {
       const through = b.size[ax] + 5; // passes through this board into the next
       const hits = kind === 'nail' || kind === 'screw' ? [through] : Array.from({ length: 30 }, (_, i) => through + i * 2);
-      if (!hits.some(t => boardAt(add(world, scale(d, -t)), b))) say('warn', 'hw-no-partner', h.step, `A ${label} does not go into another board behind it.`, [h.key]);
+      if (!hits.some(t => boardAt(add(world, scale(d, -t)), b))) say('warn', 'hw-no-partner', h.step, `A ${label} does not go into another board behind it.${missHint(world, scale(d, -1), b, P[h.part].len_mm)}`, [h.key]);
     } else if (kind === 'shelf_pin') {
       const tip = add(world, scale(d, 6));
       if (boardAt(tip, b, -0.5)) say('warn', 'pin-blocked', h.step, `A ${label} points into another board.`, [h.key]);

@@ -3,9 +3,39 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { bladeDepth } from '../guide.js';
 
 const PI = Math.PI;
+
+// Hardware models made in Blender (assets/blender/hardware.py → web/public/models/hardware.glb), one per kind.
+// Kinds that are missing, or a file that does not load, fall back to the simple built-in models below.
+const LIB = {};
+export const hardwareReady = new GLTFLoader().loadAsync(`${import.meta.env?.BASE_URL ?? '/'}models/hardware.glb`)
+  .then(gltf => { for (const root of gltf.scene.children) LIB[root.name] = root; })
+  .catch(e => console.warn('Hardware models not loaded, using the simple ones:', e?.message || e));
+
+// a library model at the part's size: "head" scales evenly with the diameter, "shaft" stretches with the length.
+// A part's own material or colour (a white plastic dowel, a light-coloured bolt) replaces the model's, except the dark marks.
+const tinted = new Map();
+const tint = (m, color) => { const k = `${m.uuid}|${color}`; if (!tinted.has(k)) { const c = m.clone(); c.color.set(color); c.map = null; tinted.set(k, c); } return tinted.get(k); };
+function fromLibrary(kind, M, size, part) {
+  const src = LIB[kind], m = src.clone(true), { d0, l0 } = src.userData;
+  const ds = size.d && d0 ? size.d / d0 : 1, ls = size.len && l0 ? size.len / l0 : 1;
+  for (const holder of m.children) {
+    if (holder.userData.role === 'head') holder.scale.setScalar(ds);
+    else if (holder.userData.role === 'shaft') holder.scale.set(ls, ds, ds);
+  }
+  const own = part?.material && M[part.material], color = part?.color;
+  m.traverse(o => {
+    if (!o.isMesh) return;
+    const name = o.material.name;
+    let mt = M[name] || M.zinc;
+    if (name !== 'dark') { if (own) mt = own; if (color) mt = tint(mt, color); }
+    o.material = mt; o.castShadow = true;
+  });
+  return m;
+}
 
 let grain = null;
 function grainTexture() {
@@ -273,6 +303,7 @@ export function makeShape(part, holes, M) {
       meshes = tubeMeshes(q, shapeMat(name, color, M, 600, true));
     } else if (q.type === 'plate') {
       const sh = new THREE.Shape(q.outline.map(([u, v]) => new THREE.Vector2(u, v)));
+      for (const h of q.holes || []) sh.holes.push(new THREE.Path(h.map(([u, v]) => new THREE.Vector2(u, v))));
       // rounded edges: the bevel starts r inside the outline, so the part keeps the traced size and thickness
       const r = q.r || 0;
       const geo = new THREE.ExtrudeGeometry(sh, r > 0.5
@@ -324,11 +355,21 @@ const cylX = (r, len, x0, mat, seg = 20) => {
 export const washerThick = d => Math.max(1, d * 0.12);
 const threads = (g, r, len, M) => { const n = Math.max(3, Math.floor(len / (r * 0.9))); for (let i = 0; i < n; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.2, 5, 16), M.steel); t.rotation.y = PI / 2; t.position.x = -len + (i + 0.5) * (len / n); g.add(t); } };
 
-/** Hardware piece built along +x. size = { len, d } in mm (null = typical). Returns { group, spinnable } */
-export function makeHardware(kind, M, size = {}) {
+// a round profile [[radius, x], ..] spun around the x axis (knobs, feet)
+const latheX = (profile, mat, seg = 32) => { const m = new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r, x]) => new THREE.Vector2(r, x)), seg), twoSided(mat)); m.rotation.z = -PI / 2; return m; };
+
+/** Hardware piece built along +x (out of the surface). size = { len, d } in mm (null = typical).
+    part (optional): a hardware part with its own "shape", drawn instead of the built-in model. Returns { group, spinnable } */
+export function makeHardware(kind, M, size = {}, part = null) {
   const g = new THREE.Group();
   const L = size.len, D = size.d;
-  if (kind === 'dowel') {
+  if (part?.shape) {
+    // the shape stands on the surface with +y out of it; hardware is built along +x
+    const body = makeShape({ ...part, material: part.material || 'metal' }, [], M);
+    body.rotation.z = -PI / 2; g.add(body);
+  } else if (LIB[kind]) {
+    g.add(fromLibrary(kind, M, size, part));
+  } else if (kind === 'dowel') {
     const len = L || 30, r = (D || 8) / 2;
     g.add(cylX(r, len, -len * 0.4, M.beech));
     for (let i = 1; i < 5; i++) g.add(cylX(r * 1.02, 0.9, -len * 0.4 + (i * len) / 5 - 0.45, M.groove));
@@ -378,6 +419,22 @@ export function makeHardware(kind, M, size = {}) {
     const up = new THREE.Mesh(new THREE.BoxGeometry(40, 20, 2), M.zinc); up.position.set(22, 0, -21); g.add(up);
     const h1 = new THREE.Mesh(new THREE.CircleGeometry(2.4, 18), M.dark); h1.rotation.y = PI / 2; h1.position.set(2.1, 0, 8); g.add(h1);
     const h2 = new THREE.Mesh(new THREE.CircleGeometry(2.4, 18), M.dark); h2.position.set(28, 0, -19.9); g.add(h2);
+  } else if (kind === 'knob') {
+    // mushroom knob: short neck, round head; d = head diameter, len = how far it stands out
+    const d = D || 30, h = L || 25, r = d / 2, n = Math.max(4, d * 0.22);
+    g.add(latheX([[0, 0], [n, 0], [n, h * 0.35], [r * 0.75, h * 0.55], [r, h * 0.78], [r * 0.8, h * 0.97], [0, h]], M.zinc));
+    g.add(cylX(1.9, 12, -12, M.steel, 10)); // the screw thread it sits on
+  } else if (kind === 'foot') {
+    // adjustable foot: threaded stud into the board, round ribbed pad outside; d = pad diameter, len = stud length
+    const d = D || 32, stud = L || 20, r = d / 2;
+    g.add(cylX(4, stud, -stud, M.steel, 12)); threads(g, 4.2, stud, M);
+    g.add(latheX([[0, 0], [r * 0.55, 0], [r, 4], [r, 12], [0, 12]], M.black, 28));
+    for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.BoxGeometry(6, 1.6, 1.6), M.dark); const a = (i / 12) * 2 * PI; rib.position.set(8, Math.cos(a) * r, Math.sin(a) * r); g.add(rib); }
+  } else if (kind === 'cap') {
+    // cover cap: thin round cap over a hole or bolt head; d = diameter
+    const r = (D || 14) / 2;
+    g.add(latheX([[0, 0], [r, 0], [r, 1.2], [r * 0.85, 2.4], [0, 2.8]], M.plastic, 24));
+    g.add(cylX(r * 0.45, 6, -6, M.plastic, 16)); // the plug that holds it
   } else {
     const b = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), M.zinc); b.position.x = 5; g.add(b);
   }
@@ -398,4 +455,4 @@ export function makeTurnArrow(M) {
 }
 
 /** Hole diameter a hardware kind leaves in its board. 0 = none drawn. */
-export const HOLE_FOR = { dowel: 8, cam_screw: 9, cam_lock: 15.4, shelf_pin: 5, screw: 0, nail: 0, bolt: 7, allen_bolt: 0, washer: 0, nut: 0, bracket: 0, other: 0 };
+export const HOLE_FOR = { dowel: 8, cam_screw: 9, cam_lock: 15.4, shelf_pin: 5, screw: 0, nail: 0, bolt: 7, allen_bolt: 0, washer: 0, nut: 0, bracket: 0, knob: 0, foot: 0, cap: 0, other: 0 };

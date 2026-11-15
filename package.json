@@ -5,16 +5,24 @@
   "type": "module",
   "description": "Scan a flat-pack furniture manual and build it step by step in 3D.",
   "scripts": {
-    "dev": "concurrently -n api,web -c yellow,cyan \"node --watch server/index.js\" \"vite\"",
+    "dev": "concurrently -n api,web -c yellow,cyan \"DEV=1 node --watch server/index.js\" \"vite\"",
     "build": "vite build",
+    "prestart": "vite build",
     "start": "node server/index.js",
-    "example": "node scripts/make-example.mjs"
+    "example": "node scripts/make-example.mjs",
+    "models": "blender -b --factory-startup --python assets/blender/hardware.py",
+    "xcheck": "node scripts/xcheck.mjs",
+    "eval": "node scripts/eval.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "multer": "^2.0.2",
+    "nodemailer": "^10.4.0",
     "pdfjs-dist": "4.10.38",
     "playwright-core": "^1.64.1",
     "three": "0.160.0"

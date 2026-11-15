@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Buildit · System architecture</title>
+<style>
+@page { size: A4 landscape; margin: 0 }
+* { box-sizing: border-box }
+html, body { margin: 0; background: #fff; color: #111; font: 11px/1.35 Helvetica, Arial, sans-serif }
+.page { position: relative; width: 1123px; height: 794px; overflow: hidden; page-break-after: always }
+.page:last-child { page-break-after: auto }
+h1 { position: absolute; left: 30px; top: 20px; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em }
+h1 small { font-weight: 400; font-size: 13px; color: #555; margin-left: 12px }
+.date { position: absolute; right: 30px; top: 28px; color: #777; font-size: 11px }
+.lane { position: absolute; left: 30px; width: 1063px; border: 1px solid #ddd; border-radius: 8px; background: #FAFAFA }
+.lane > .ll { position: absolute; z-index: 2; left: 12px; top: -9px; background: #fff; padding: 0 6px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #666 }
+.box { position: absolute; border-radius: 6px; padding: 8px 9px; background: #fff; border: 1.5px solid #111; font-size: 10.5px }
+.box b { display: block; font-size: 11.5px; margin-bottom: 3px; line-height: 1.2 }
+.box small { display: block; color: #666; font-size: 9.5px; margin-top: 3px }
+.ours { background: #111; color: #fff; border-color: #111 }
+.ours small { color: #BDBDBD }
+.ai { background: #FFC400; border-color: #111 }
+.ai small { color: #4A3A00 }
+.data { background: #EEE; border-color: #999 }
+.data small { color: #666 }
+.user { background: #fff; border-style: dashed }
+svg.arrows { position: absolute; left: 0; top: 0; width: 1123px; height: 794px; pointer-events: none; z-index: 1 }
+svg.arrows path { fill: none; stroke: #111; stroke-width: 1.6 }
+svg.arrows path.dash { stroke-dasharray: 5 4 }
+svg.arrows text { font: 9.5px Helvetica, Arial, sans-serif; fill: #333; paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round }
+.legend { position: absolute; left: 30px; bottom: 22px; display: flex; gap: 22px; align-items: center; font-size: 10.5px; color: #333 }
+.legend i { display: inline-block; width: 22px; height: 13px; border: 1.5px solid #111; border-radius: 3px; vertical-align: -2px; margin-right: 6px }
+.note { position: absolute; left: 30px; bottom: 56px; width: 1063px; font-size: 10.5px; color: #333; border-top: 1px solid #ddd; padding-top: 8px }
+.note b { color: #111 }
+/* page 2 */
+.cols { position: absolute; left: 30px; top: 70px; width: 1063px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px }
+.col { border: 1.5px solid #111; border-radius: 8px; padding: 14px 16px 10px; font-size: 11px }
+.col h2 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px }
+.col h2 i { display: inline-block; width: 22px; height: 13px; border: 1.5px solid #111; border-radius: 3px }
+.col ul { margin: 0; padding-left: 16px }
+.col li { margin: 0 0 6px }
+.col li b { font-weight: 700 }
+.col code { font: 10px Menlo, Consolas, monospace; background: #F2F2F2; padding: 1px 4px; border-radius: 3px }
+.files { position: absolute; left: 30px; top: 470px; width: 1063px; border: 1.5px solid #111; border-radius: 8px; padding: 12px 16px; font-size: 10.5px }
+.files h2 { margin: 0 0 8px; font-size: 14px }
+.files table { border-collapse: collapse; width: 100% }
+.files td { padding: 3px 10px 3px 0; vertical-align: top; border-top: 1px solid #eee }
+.files td:first-child { font: 10px Menlo, Consolas, monospace; white-space: nowrap; width: 230px }
+.files tr.h td { border-top: 0; font-weight: 700; color: #666; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; padding-top: 6px }
+.foot { position: absolute; left: 30px; bottom: 22px; font-size: 10px; color: #777 }
+</style></head>
+<body>
+
+<!-- ===================== PAGE 1: the flow ===================== -->
+<div class="page" id="p1">
+  <h1>Buildit · system architecture <small>how a paper manual becomes a 3D assembly guide</small></h1>
+  <div class="date">Group 38 · November 2026</div>
+
+  <div class="lane" style="top:78px;height:150px"><span class="ll">1 · In the browser (web/) · desktop and phone, no install</span></div>
+  <div class="lane" style="top:252px;height:220px"><span class="ll">2 · On our server (server/) · the pipeline, one scan = one run</span></div>
+  <div class="lane" style="top:500px;height:132px"><span class="ll">3 · AI model (Claude API) · four calls, nothing else</span></div>
+
+  <!-- lane 1 -->
+  <div class="box user" id="a1" style="left:48px;top:104px;width:160px;height:100px"><b>Paper manual</b>The PDF from the maker's website, or phone photos of the printed pages.<small>Input: PDF (≤ 24 MB) or up to 60 images</small></div>
+  <div class="box" id="a2" style="left:246px;top:104px;width:232px;height:100px"><b>scan.js · capture &amp; upload</b>Live camera with a shutter, or photo / video / PDF upload. Video → de-duplicated frames. If the AI rejects the PDF, the pages are rendered to JPEG in the browser (pdf.js) and resent.<small>Streams progress back as it runs (NDJSON)</small></div>
+  <div class="box" id="a3" style="left:598px;top:104px;width:292px;height:100px"><b>Build screen · build.js + viewer/Viewer.js</b>Three.js scene built from the guide: each step animates (boards fly in, cam locks turn), new parts in yellow, labels, parts bench, actual-size view (bank-card calibration), the manual page beside the step, and a "3D view may be wrong" mark on uncertain steps.</div>
+  <div class="box" id="a4" style="left:928px;top:104px;width:165px;height:100px"><b>"Stuck on this step?"</b>One question about the current step. The answer comes from a small, fast model that gets the step text and its parts as context.<small>POST /api/ask</small></div>
+
+  <!-- lane 2 -->
+  <div class="box ai" id="b1" style="left:40px;top:286px;width:132px;height:168px"><b>1 · Read the manual</b>The whole manual goes to the model with a strict schema (server/prompt.js). It returns the guide as JSON: parts, boards with positions, hardware, steps.<small>The only place the 2D→3D guess is made</small></div>
+  <div class="box ours" id="b2" style="left:190px;top:286px;width:132px;height:168px"><b>2 · Normalise</b>guide.js validates every field and brings the guide into one standard form. Symbolic joints ("flush on the inside face, centred") are turned into exact mm coordinates.<small>Shared code: same file runs in the browser</small></div>
+  <div class="box ours" id="b3" style="left:340px;top:286px;width:132px;height:168px"><b>3 · Auto-fix</b>autofix.js makes safe corrections in code: slides a part out of a small overlap, moves unpaired cam locks to where the cam screw ends, re-aims screws. Each fix is kept only if the check gets better.</div>
+  <div class="box ours" id="b4" style="left:490px;top:286px;width:132px;height:168px"><b>4 · Check</b>check.js + collide.js: ~15 deterministic rules. Overlaps and gaps (signed-distance test on real surfaces), floating boards, counts vs. parts list, cam screw ↔ cam lock pairing, dowels that end in no board, nails that miss the board behind.</div>
+  <div class="box ai" id="b5" style="left:640px;top:286px;width:132px;height:168px"><b>5 · Repair</b>If errors or warnings remain, the problem list (max 60 lines, errors first) goes back to the model in the same conversation. It replies with a short edit list, not a new guide.<small>Kept only if fewer problems and same step count</small></div>
+  <div class="box ai" id="b6" style="left:790px;top:286px;width:132px;height:168px"><b>6 · Render &amp; compare</b>render.js draws the 3D model with headless Chrome (parts check + up to 7 steps). The model compares the pictures with the manual pages and replies NO_CHANGES or an edit list.<small>Kept only if the check is not worse</small></div>
+  <div class="box data" id="b7" style="left:940px;top:286px;width:132px;height:168px"><b>7 · Save</b>guides/&lt;id&gt;.json with the check result, warnings per step, model and cost. SQLite holds owner, access and sessions. The manual pages are kept so each step can show its page.<small>GET /api/guides/:id</small></div>
+
+  <!-- lane 3 -->
+  <div class="box ai" id="c1" style="left:40px;top:526px;width:282px;height:92px"><b>Pass 1 · strongest model (Opus)</b>Image understanding + long structured output (often &gt; 10,000 tokens of JSON). PDF sent as one document so every page is seen at full quality.</div>
+  <div class="box ai" id="c2" style="left:640px;top:526px;width:132px;height:92px"><b>Pass 2 · Opus</b>Follow-up turn: still sees the pages and its first answer. Pages are cached, so cheap.</div>
+  <div class="box ai" id="c3" style="left:790px;top:526px;width:132px;height:92px"><b>Pass 3 · Opus</b>Gets our rendered pictures next to the manual drawings.</div>
+  <div class="box ai" id="c4" style="left:940px;top:526px;width:153px;height:92px"><b>Ask · small model (Haiku)</b>Low latency, low cost. One step, one question.</div>
+
+  <div class="note"><b>One guide format is the single source of truth</b> (web/src/guide.js): parts, boards with millimetre positions, hardware anchored to a board face, steps with "take these parts". The 3D view, the checks, the parts bench, the actual-size view and the ask box are all built from it, so a new product needs no new code. Every call's tokens and price are logged into the guide (<code>cost</code>). <b>Measured (7 Nov 2026, Opus):</b> tall shelf manual, 14 steps: $0.60 and 113 s; chest with 8 drawers, 74 steps: $2.78 and 699 s.</div>
+  <div class="legend"><span><i style="background:#FFC400"></i>AI call</span><span><i style="background:#111"></i>Our algorithms (deterministic, no AI)</span><span><i style="background:#EEE;border-color:#999"></i>Storage</span><span><i style="border-style:dashed"></i>User input</span><span><i style="background:#fff"></i>Browser UI</span></div>
+
+  <svg class="arrows" id="arr1"></svg>
+</div>
+
+<!-- ===================== PAGE 2: who does what ===================== -->
+<div class="page" id="p2">
+  <h1>Who does what <small>the split between the AI model and our own code</small></h1>
+  <div class="date">Group 38 · November 2026</div>
+
+  <div class="cols">
+    <div class="col"><h2><i style="background:#FFC400"></i>The AI model does</h2>
+      <ul>
+        <li><b>Reads the drawings.</b> Identifies parts and counts from the parts page, follows the step order, and guesses where each board goes and which way it faces. Output: the guide as JSON in our schema.</li>
+        <li><b>Repairs on request.</b> Gets a numbered problem list from our checker and answers with an edit list (<code>{"edits":[{"panel":"B1","set":{…}}]}</code>). It never gets a free hand: we apply the edits and re-check.</li>
+        <li><b>Compares pictures.</b> Looks at our 3D renders next to the manual pages and points out mismatches, again as an edit list or <code>NO_CHANGES</code>.</li>
+        <li><b>Answers one question</b> about one step in the "Stuck on this step?" box.</li>
+      </ul>
+      <p style="margin:8px 0 0;color:#555">Everything the model returns is treated as a proposal. A change is kept only if our check scores it better (or, for the compare pass, not worse).</p>
+    </div>
+    <div class="col"><h2><i style="background:#111"></i>Our code does (deterministic, testable)</h2>
+      <ul>
+        <li><b>Geometry representation.</b> Millimetre boxes plus primitives (cylinder, plate, lathe, tube, sweep) for curved parts; explicit joints (<code>attach: {to, face, x/y/z}</code>) and hardware rows (<code>at + to + n</code>) that <code>normalizeGuide</code> resolves into exact coordinates.</li>
+        <li><b>Collision and gap detection.</b> <code>collide.js</code> samples each part's surface and runs a signed-distance test against the others; works for rotated and curved parts; declared overlaps (pole in socket) are allowed.</li>
+        <li><b>Assembly-consistency rules.</b> <code>check.js</code>: floating boards, part and hardware counts vs. the parts list, hardware off its board or on the wrong face, dowels and cam screws that point into no board, cam screw ↔ cam lock pairing, nails that miss the board behind, steps that forget hardware they use.</li>
+        <li><b>Automatic corrections.</b> <code>autofix.js</code> nudges parts out of small overlaps, places unpaired cam locks, re-aims screws; each fix kept only if the score improves.</li>
+        <li><b>Rendering and the viewer.</b> Keyframes, staggered timing, auto camera, labels, part models with real hole patterns, actual-size SVG profiles; the same renderer makes the pictures for the compare pass.</li>
+        <li><b>Evaluation.</b> <code>scripts/eval.mjs</code> runs the test manuals through the pipeline and reports errors, warnings, cost and time per manual; <code>xcheck.mjs</code> puts each manual page next to the 3D view for human scoring.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="files"><h2>Where to find it</h2>
+    <table>
+      <tr class="h"><td>Path</td><td>What it is</td></tr>
+      <tr><td>web/src/guide.js</td><td>The guide format and <code>normalizeGuide()</code> (validation, joints → coordinates). Shared by server and browser.</td></tr>
+      <tr><td>web/src/check.js · collide.js · autofix.js</td><td>Consistency rules, surface-based collision test, safe automatic fixes.</td></tr>
+      <tr><td>web/src/viewer/Viewer.js · parts3d.js</td><td>Three.js scene, animation and camera; 3D models of boards and hardware (hardware.glb built in Blender).</td></tr>
+      <tr><td>web/src/scan.js · build.js · main.js</td><td>Capture and upload; the build screen; routing, guide list, accounts.</td></tr>
+      <tr><td>server/index.js · prompt.js · ai.js · render.js</td><td>The pipeline (analyze, repair, compare, save); the instructions the model gets; the model wrapper with cost logging; headless-Chrome renders.</td></tr>
+      <tr><td>server/auth.js · db.js</td><td>Sign-in by email link, sessions, guide ownership (SQLite).</td></tr>
+      <tr><td>scripts/eval.mjs · xcheck.mjs · check-guide.mjs</td><td>Evaluation runs over the test manuals; manual page vs. 3D view pictures; check a guide file from the command line.</td></tr>
+    </table>
+  </div>
+  <div class="foot">Buildit · Group 38 · TUM Heilbronn · architecture overview, page 2 of 2</div>
+</div>
+
+<script>
+// arrows are drawn from the boxes' real positions, so moving a box moves its arrows
+function draw(svgId, arrows) {
+  const svg = document.getElementById(svgId), page = svg.parentElement.getBoundingClientRect();
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '<defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="#111"/></marker></defs>';
+  const pt = (id, side) => { const r = document.getElementById(id).getBoundingClientRect(); const x = r.left - page.left, y = r.top - page.top;
+    return { left: [x, y + r.height / 2], right: [x + r.width, y + r.height / 2], top: [x + r.width / 2, y], bottom: [x + r.width / 2, y + r.height] }[side]; };
+  for (const a of arrows) {
+    const [fx, fy] = pt(a.from, a.fs), [tx, ty] = pt(a.to, a.ts); let d, lx, ly;
+    if (a.via) { d = `M${fx} ${fy}` + a.via.map(([x, y]) => `L${x} ${y}`).join('') + `L${tx} ${ty}`; [lx, ly] = a.at || a.via[0]; }
+    else if (a.fs === 'bottom' || a.fs === 'top') { const my = a.my ?? (fy + ty) / 2; d = `M${fx} ${fy}V${my}H${tx}V${ty}`; lx = (fx + tx) / 2; ly = my; }
+    else if (Math.abs(fy - ty) < 2) { d = `M${fx} ${fy}H${tx}`; lx = (fx + tx) / 2; ly = fy; }
+    else { const mx = (fx + tx) / 2; d = `M${fx} ${fy}H${mx}V${ty}H${tx}`; lx = mx; ly = (fy + ty) / 2; }
+    const p = document.createElementNS(ns, 'path'); p.setAttribute('d', d); p.setAttribute('marker-end', 'url(#m)'); if (a.dash) p.setAttribute('class', 'dash'); svg.append(p);
+    if (a.label) { const t = document.createElementNS(ns, 'text'); t.setAttribute('x', lx + (a.dx || 0)); t.setAttribute('y', ly + (a.dy || -5)); t.setAttribute('text-anchor', 'middle'); t.textContent = a.label; svg.append(t); }
+  }
+}
+draw('arr1', [
+  { from: 'a1', fs: 'right', to: 'a2', ts: 'left' },
+  { from: 'a2', fs: 'bottom', to: 'b1', ts: 'top', label: 'POST /api/analyze · pages or PDF', dy: -5 },
+  { from: 'b1', fs: 'right', to: 'b2', ts: 'left' },
+  { from: 'b2', fs: 'right', to: 'b3', ts: 'left' },
+  { from: 'b3', fs: 'right', to: 'b4', ts: 'left' },
+  { from: 'b4', fs: 'right', to: 'b5', ts: 'left', label: 'problems left?', dy: -92 },
+  { from: 'b5', fs: 'right', to: 'b6', ts: 'left' },
+  { from: 'b6', fs: 'right', to: 'b7', ts: 'left' },
+  { from: 'b7', fs: 'top', to: 'a3', ts: 'bottom', label: 'the finished guide', my: 240, dy: -5 },
+  { from: 'b1', fs: 'bottom', to: 'c1', ts: 'top', dash: true },
+  { from: 'b5', fs: 'bottom', to: 'c2', ts: 'top', dash: true },
+  { from: 'b6', fs: 'bottom', to: 'c3', ts: 'top', dash: true },
+  { from: 'a4', fs: 'right', to: 'c4', ts: 'right', via: [[1108, 154], [1108, 565]], dash: true, at: [1108, 360], label: '' },
+]);
+</script>
+</body></html>

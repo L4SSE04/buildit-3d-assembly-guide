@@ -36,7 +36,13 @@ export const hasProfile = (kind, part) => !!(part ? profileFor(part) : PROFILES[
 let ppm = 3.78;
 try { const v = parseFloat(localStorage.getItem('bw-ppm')); if (v > 2) ppm = v; } catch (e) { /* storage blocked */ }
 const $ = id => document.getElementById(id);
-let current = null;
+let current = null, opener = null;
+// a modal: the page behind cannot be reached while it is open, and focus goes back where it was
+function close() {
+  if ($('ov').hidden) return;
+  $('ov').hidden = true; document.querySelector('.wrap').inert = false;
+  if (opener?.isConnected) opener.focus(); opener = null;
+}
 
 function draw() {
   const P = profileFor(current); if (!P) return;
@@ -46,9 +52,19 @@ function draw() {
 export function openActual(id, part) {
   current = part; $('ov-t').textContent = `${id} · ${part.name}, actual size`;
   $('ov-d').textContent = 'Lay the real part on the drawing. If it matches, you have the right one. Sizes are typical for this kind of part; check the manual if yours differs.';
-  $('cal').value = ppm; draw(); $('ov').hidden = false; $('ov-x').focus();
+  opener = document.activeElement;
+  $('cal').value = ppm; draw(); $('ov').hidden = false; document.querySelector('.wrap').inert = true; $('ov-x').focus();
 }
 $('cal').addEventListener('input', e => { ppm = parseFloat(e.target.value); try { localStorage.setItem('bw-ppm', ppm); } catch (err) { /* ignore */ } draw(); });
-$('ov-x').addEventListener('click', () => ($('ov').hidden = true));
-$('ov').addEventListener('click', e => { if (e.target === $('ov')) $('ov').hidden = true; });
-addEventListener('keydown', e => { if (e.key === 'Escape') $('ov').hidden = true; });
+$('ov-x').addEventListener('click', close);
+$('ov').addEventListener('click', e => { if (e.target === $('ov')) close(); });
+addEventListener('keydown', e => {
+  if ($('ov').hidden) return;
+  if (e.key === 'Escape') close();
+  // Tab goes round inside the dialog
+  if (e.key === 'Tab') {
+    const f = [...$('ov').querySelectorAll('button, input, a[href]')].filter(el => !el.disabled && el.offsetParent);
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus(); }
+    else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus(); }
+  }
+});

@@ -1,0 +1,199 @@
+/* Website pages (landing, sign-in, My guides, legal, messages): bold yellow.
+   The page is the logo's yellow, set with huge black condensed capitals, solid black bands and black buttons;
+   the live 3D bookcase is the picture. White and light grey carry the reading parts.
+   The build screen keeps its own look (styles.css); only the header mark is shared. */
+:root {
+  --y: #FFC400;
+  --f-disp: "Archivo Variable", "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --pad: max(clamp(20px, 5vw, 64px), calc((100% - 1312px) / 2));
+}
+
+body:not([data-view="build"]) {
+  --bg: #F2F2F2; --surface: #FFFFFF; --sunk: #E6E6E6; --fg: #111111; --muted: #4A4A4A; --line: #111111;
+  --accent: var(--y); --accent-ink: #111111; --warn: #C8211A; --warn-bg: #FBE9E7;
+  color-scheme: light; background: var(--bg); padding: 0; caret-color: var(--fg); accent-color: var(--fg);
+}
+body:not([data-view="build"]) ::selection { background: #111; color: var(--y) }
+body:not([data-view="build"]) .wrap { max-width: none; margin: 0; gap: 0; min-height: 100svh }
+body:not([data-view="build"]) main { flex: 1 }
+body:not([data-view="build"]) main > section:not(.landing) { padding: clamp(32px, 6vw, 80px) var(--pad) }
+
+/* ---------- type ---------- */
+body:not([data-view="build"]) :is(h1, h2, .h1s) {
+  font-family: var(--f-disp); font-weight: 900; font-stretch: 75%; text-transform: uppercase; letter-spacing: -.01em; line-height: .88; text-wrap: balance;
+}
+body:not([data-view="build"]) h3 { font-family: var(--f-disp); font-weight: 800; font-stretch: 85%; text-transform: uppercase; letter-spacing: 0; line-height: 1.05 }
+body:not([data-view="build"]) .lbl { font: 800 13px var(--f-disp); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+
+/* ---------- buttons and links ---------- */
+body:not([data-view="build"]) .btn {
+  font: 800 16px var(--f-disp); text-transform: uppercase; letter-spacing: .04em; border: 2px solid var(--fg); border-radius: 6px;
+  background: transparent; color: var(--fg); padding: 12px 22px; min-height: 50px; transition: background-color .15s, color .15s;
+}
+body:not([data-view="build"]) .btn.primary { background: var(--fg); color: var(--y); border-color: var(--fg) }
+body:not([data-view="build"]) .btn:hover:not(:disabled) { background: var(--fg); color: var(--y) }
+body:not([data-view="build"]) .btn.primary:hover:not(:disabled) { background: #2B2B2B }
+body:not([data-view="build"]) .btn.small { min-height: 42px; padding: 8px 18px; font-size: 15px }
+body:not([data-view="build"]) .btn.big { min-height: 60px; padding: 16px 28px; font-size: 17px }
+body:not([data-view="build"]) .btn:disabled { opacity: .4 }
+body:not([data-view="build"]) :is(.fine, .muted, .prose) a { color: var(--fg); text-decoration-thickness: 2px; text-underline-offset: 3px }
+
+/* ---------- header: on yellow, always ---------- */
+body:not([data-view="build"]) header.top { background: var(--y); padding: 18px var(--pad); gap: 12px }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--fg); text-decoration: none; border-radius: 6px }
+.brand .name { font: 900 26px/1 var(--f-disp); font-stretch: 110%; text-transform: uppercase; letter-spacing: -.01em }
+.brand .mark { flex: none; color: var(--fg) }
+.brand.small .name { font-size: 20px }
+body:not([data-view="build"]) header.top .brand .disc { fill: #FFFFFF }
+body:not([data-view="build"]) .topnav { gap: 6px }
+body:not([data-view="build"]) .navlink { font: 800 15px var(--f-disp); color: var(--fg); padding: 10px 12px; border-radius: 6px }
+body:not([data-view="build"]) .navlink:hover { background: rgba(17, 17, 17, .1) }
+body:not([data-view="build"]) header.top #nav-signin { background: var(--fg); color: var(--y); border-color: var(--fg) }
+body:not([data-view="build"]) header.top #nav-signin:hover { background: #2B2B2B }
+body:not([data-view="build"]) .acct-btn { border: 2px solid var(--fg); background: var(--fg); color: var(--y); font: 900 18px var(--f-disp) }
+body:not([data-view="build"]) .menu { border: 2px solid var(--fg); border-radius: 8px; box-shadow: 0 18px 36px -14px rgba(0, 0, 0, .4) }
+body:not([data-view="build"]) .menu [role=menuitem] { border-radius: 4px }
+body:not([data-view="build"]) .menu [role=menuitem]:hover, body:not([data-view="build"]) .menu [role=menuitem]:focus-visible { background: var(--bg) }
+
+/* ---------- landing: hero on yellow ---------- */
+.landing { display: flex; flex-direction: column }
+.hero { background: var(--y); display: grid; gap: 28px 48px; align-items: center; padding: clamp(8px, 2vh, 24px) var(--pad) clamp(36px, 5vw, 64px) }
+@media (min-width: 960px) { .hero { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); min-height: calc(100svh - 82px) } }
+.hero-text { display: flex; flex-direction: column; gap: clamp(16px, 2.6vh, 26px); min-width: 0 }
+/* sized by width and height, so the headline and the buttons fit the first screen from phones to wide monitors */
+.hero h1 { font-size: clamp(44px, min(7.4vw, 13vh), 128px); margin: 0 }
+.lead { font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55; margin: 0; max-width: 31em }
+.acts { display: flex; flex-wrap: wrap; gap: 12px }
+.hero .fine { color: #3A3000; margin-top: -8px }
+.stage { position: relative; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px }
+.model { position: relative }
+/* not interactive: touches and the wheel go to the page */
+#hero-canvas { display: block; width: 100%; height: clamp(300px, min(40vw, 58vh), 600px); pointer-events: none; -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent) }
+#hero-labels { pointer-events: none }
+/* part labels: the manual's letters and numbers on the model, the new ones in white */
+#hero-labels .lab { background: var(--fg); color: var(--y); font: 800 13px var(--f-disp); padding: 3px 8px; border-radius: 4px; box-shadow: none }
+#hero-labels .lab::after { background: var(--fg) }
+#hero-labels .lab.new { background: #FFFFFF; color: var(--fg) }
+#hero-labels .lab.new::after { background: #FFFFFF }
+#hero-labels .lab.big { font-size: 13px; padding: 3px 8px }
+
+/* what the step asks for, under the model */
+.stage-info { background: var(--fg); color: #FFFFFF; border-radius: 10px; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px }
+.prog { display: flex; gap: 4px }
+.prog i { flex: 1; height: 5px; border-radius: 3px; background: #3A3A3A; transition: background-color .3s }
+.prog i.done { background: #8A8A8A }
+.prog i.cur { background: var(--y) }
+.si-step { margin: 2px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px }
+.si-step b { font: 900 20px var(--f-disp); font-stretch: 80%; text-transform: uppercase; color: var(--y) }
+.si-step span { font: 800 18px var(--f-disp); font-stretch: 90%; text-transform: uppercase }
+.si-need-h { margin: 4px 0 0; font: 800 12px var(--f-disp); letter-spacing: .08em; text-transform: uppercase; color: #9A9A9A }
+.si-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px }
+.si-parts li { display: inline-flex; align-items: center; gap: 8px; background: #262626; border-radius: 6px; padding: 5px 10px 5px 5px; font-size: 15px }
+.si-parts li b { font: 800 13px var(--f-disp); background: var(--y); color: var(--fg); border-radius: 4px; padding: 3px 7px; min-width: 26px; text-align: center }
+.si-parts li.none { padding: 5px 10px; color: #BDBDBD }
+
+/* ---------- landing: bands ---------- */
+.landing .band { background: var(--surface); padding: clamp(56px, 8vw, 120px) var(--pad); display: flex; flex-direction: column; gap: clamp(28px, 4vw, 48px); scroll-margin-top: 0 }
+.landing .band.dark { background: var(--fg); color: #FFFFFF }
+.landing .band.light { background: var(--bg) }
+.landing .band h2 { font-size: clamp(42px, 6vw, 100px); margin: 0 }
+.landing .band h3 { font-size: clamp(22px, 2vw, 28px); margin: 0 }
+.landing .band p { margin: 0 }
+.landing .band .sub { margin-top: calc(-1 * clamp(14px, 2vw, 28px)); font-size: 19px; color: var(--muted) }
+
+/* what a guide gives you: four columns on black, split by thin rules */
+.feats { list-style: none; margin: 0; padding: 0; display: grid; gap: 32px }
+@media (min-width: 720px) { .feats { grid-template-columns: repeat(2, 1fr) } }
+@media (min-width: 1100px) { .feats { grid-template-columns: repeat(4, 1fr); gap: 0 } .feats li { padding: 0 28px; border-left: 1px solid #333 } .feats li:first-child { padding-left: 0; border-left: 0 } }
+.feats li { display: flex; flex-direction: column; gap: 12px }
+.dark .feats h3 { color: var(--y) }
+.dark p { color: #C9C9C9 }
+.landing .dark:first-of-type { padding-top: clamp(44px, 5vw, 72px); padding-bottom: clamp(44px, 5vw, 72px) }
+
+/* how it works: three steps, each led by a big yellow number */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 40px }
+@media (min-width: 860px) { .steps { grid-template-columns: repeat(3, 1fr); gap: 48px } }
+.steps li { display: flex; flex-direction: column; gap: 14px; border-top: 4px solid var(--fg); padding-top: 22px }
+.steps .n { font: 900 clamp(88px, 9vw, 140px)/.8 var(--f-disp); font-stretch: 75%; color: var(--fg); background: var(--y); align-self: flex-start; padding: 10px 16px 4px; border-radius: 6px }
+.steps p { color: var(--muted); font-size: 17px; max-width: 30em }
+
+/* honest about mistakes: on black, with the real warning the build screen shows */
+.landing .honest { display: grid; gap: 36px }
+@media (min-width: 960px) { .landing .honest { grid-template-columns: 1.1fr .9fr; align-items: center; gap: 72px } }
+.landing .honest h2 { color: var(--y) }
+.landing .honest p { margin-top: 24px; font-size: 19px; max-width: 34em }
+.demo { margin: 0; display: flex; flex-direction: column; gap: 12px }
+body:not([data-view="build"]) .demo .callout { background: #FFFFFF; color: var(--fg); border: 0; border-left: 0; border-radius: 8px; padding: 22px; font-size: 18px; gap: 14px; outline: 2px dashed var(--warn); outline-offset: -8px }
+.demo .callout svg { color: var(--warn); flex: none }
+.demo figcaption { color: #C9C9C9; font-size: 15px }
+
+/* pricing: a price list, prices large on the right */
+.prices { list-style: none; margin: 0; padding: 0; border-top: 4px solid var(--fg) }
+.prices li { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 24px 0; border-bottom: 2px solid var(--fg) }
+.prices h3 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+.prices p { color: var(--muted); max-width: 40em; margin-top: 8px !important }
+.prices b { font: 900 clamp(44px, 5.4vw, 84px)/1 var(--f-disp); font-stretch: 75%; white-space: nowrap }
+.soon { font: 800 12px var(--f-disp); letter-spacing: .06em; text-transform: uppercase; background: var(--y); color: var(--fg); padding: 5px 9px; border-radius: 4px }
+#pricing .fine { font-size: 14px }
+
+/* questions */
+.faq { display: flex; flex-direction: column; max-width: 980px; border-top: 4px solid var(--fg) }
+.faq details { border-bottom: 2px solid var(--fg) }
+.faq summary { cursor: pointer; font: 800 clamp(20px, 2vw, 26px)/1.15 var(--f-disp); font-stretch: 85%; text-transform: uppercase; padding: 22px 0; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 20px }
+.faq summary::-webkit-details-marker { display: none }
+.faq summary::after { content: ""; flex: none; width: 40px; height: 40px; border-radius: 6px; background: var(--fg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M12 20h16M20 12v16' stroke='%23FFC400' stroke-width='3'/%3E%3C/svg%3E") no-repeat center / 40px }
+.faq details[open] summary::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M12 20h16' stroke='%23FFC400' stroke-width='3'/%3E%3C/svg%3E") }
+.faq details p { color: var(--muted); padding: 0 0 24px; max-width: 46em; font-size: 18px }
+
+/* the closing call to action, back on yellow */
+.landing .band.closer { background: var(--y); align-items: flex-start }
+
+/* ---------- sign-in, My guides, legal, messages ---------- */
+body:not([data-view="build"]) .card { background: var(--surface); border: 2px solid var(--fg); border-radius: 10px; padding: 28px 26px; gap: 16px }
+body:not([data-view="build"]) .card h2 { font-size: 34px }
+body:not([data-view="build"]) .h1s { font-size: clamp(42px, 6vw, 60px); margin: 0 0 6px }
+body:not([data-view="build"]) .narrow { margin-top: 2vh; max-width: 520px }
+body:not([data-view="build"]) .narrow.prose { max-width: 780px }
+body:not([data-view="build"]) .field-l { font: 800 14px var(--f-disp); letter-spacing: .04em; text-transform: uppercase }
+body:not([data-view="build"]) .field { border: 2px solid var(--fg); border-radius: 6px; background: var(--surface); font-size: 18px }
+body:not([data-view="build"]) .field:focus { border-color: var(--fg) }
+body:not([data-view="build"]) .field[aria-invalid="true"] { border-color: var(--warn) }
+body:not([data-view="build"]) .notice { background: var(--bg); border-radius: 8px }
+body:not([data-view="build"]) .gitem { background: var(--surface); border: 2px solid var(--fg); border-radius: 8px }
+body:not([data-view="build"]) .gitem:hover { background: #FFF7D6 }
+body:not([data-view="build"]) .gitem b { font: 800 19px var(--f-disp); font-stretch: 90%; text-transform: uppercase }
+body:not([data-view="build"]) .gitem.is-old { border-style: dashed }
+body:not([data-view="build"]) .empty { border: 2px dashed var(--fg); border-radius: 8px }
+body:not([data-view="build"]) .prose h2 { font-size: 30px; margin-top: 18px }
+body:not([data-view="build"]) .draft { align-self: flex-start; background: var(--y); color: var(--fg); border-radius: 4px; padding: 6px 12px; margin: 2px 0 8px; font: 800 14px var(--f-disp); letter-spacing: .06em; text-transform: uppercase }
+
+/* sign-in and messages: the yellow field carries on below the header, the heading at near-hero size */
+body:is([data-view="signin"], [data-view="msg"]) main { background: var(--y) }
+body:is([data-view="signin"], [data-view="msg"]) main > section { padding-top: clamp(24px, 6vw, 72px) }
+body:is([data-view="signin"], [data-view="msg"]) .narrow.card { background: none; border: 0; padding: 0; max-width: 620px; margin-top: 0 }
+body:is([data-view="signin"], [data-view="msg"]) .h1s { font-size: clamp(56px, 8vw, 120px) }
+body:is([data-view="signin"], [data-view="msg"]) .muted { color: #2B2400 }
+body:is([data-view="signin"], [data-view="msg"]) .fine { color: #3A3000 }
+body:is([data-view="signin"], [data-view="msg"]) #msg-a .btn { flex: 0 1 auto }
+/* legal pages: a reading column under a thick rule, not a boxed card */
+body[data-view="legal"] .narrow.card.prose { background: var(--surface); border: 0; border-top: 4px solid var(--fg); border-radius: 0 }
+.btn .arr { flex: none }
+
+/* ---------- footer: black ---------- */
+body:not([data-view="build"]) .foot { background: var(--fg); color: #BDBDBD; border: 0; margin: 0; padding: 28px var(--pad); font-size: 14px; align-items: center; gap: 12px 28px }
+body:not([data-view="build"]) .foot a { color: #FFFFFF }
+body:not([data-view="build"]) .foot .brand, body:not([data-view="build"]) .foot .brand .mark { color: #FFFFFF }
+body:not([data-view="build"]) .foot .f-note { margin-right: auto }
+
+/* ---------- phones ---------- */
+@media (max-width: 720px) {
+  body:not([data-view="build"]) header.top { padding: 14px var(--pad) }
+  body:not([data-view="build"]) .brand .name { font-size: 22px }
+}
+@media (max-width: 600px) {
+  body:not([data-view="build"]) .btn.big { width: 100% }
+  .hero h1 { font-size: clamp(44px, 14vw, 64px) }
+  .prices li { align-items: flex-start; flex-direction: column; gap: 6px }
+}
+@media (prefers-reduced-motion: reduce) { body:not([data-view="build"]) .btn { transition: none } }
+@media (max-width: 400px) { body:not([data-view="build"]) .btn.big { font-size: 15px; padding: 14px 16px; letter-spacing: .02em } }

@@ -9,3 +9,20 @@ CLAUDE.md
 
 # course documents with names and matriculation numbers
 proposal/
+
+# Blender working file (rebuilt by npm run models)
+assets/blender/*.blend*
+
+# test manuals and eval runs (manuals are third-party documents)
+eval/
+
+# local AI-tool and design-tool setup (skills, hooks, review screenshots, mock-ups)
+.agent/
+.claude/
+.cursor/
+.gemini/
+.impeccable/
+skills-lock.json
+
+# screen recordings
+*.mov

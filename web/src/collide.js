@@ -3,7 +3,7 @@
 // negative inside). A part sinks into another when one of its points is inside the other. Thin surfaces
 // (grilles, domes) also get a side test, so a thin blade that crosses a grille is found too.
 // All in millimetres, part coordinates unless named "world".
-import { rotate, bladeDepth } from './guide.js';
+import { rotate, unrotate, bladeDepth } from './guide.js';
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -16,15 +16,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const steps = (L, each, lo, hi) => clamp(Math.ceil(L / each), lo, hi);
 const PI = Math.PI;
 
-/** Undo rotate(v, rotDeg). */
-export function unrotate(v, rotDeg) {
-  let [x, y, z] = v;
-  const [a, b, c] = rotDeg.map(d => (-d * PI) / 180);
-  [y, z] = [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
-  [x, z] = [x * Math.cos(b) + z * Math.sin(b), -x * Math.sin(b) + z * Math.cos(b)];
-  [x, y] = [x * Math.cos(c) - y * Math.sin(c), x * Math.sin(c) + y * Math.cos(c)];
-  return [x, y, z];
-}
+export { unrotate }; // lives in guide.js; kept here for older imports
 
 /** Signed distance to a 2D polygon (negative inside). */
 function sdPoly(poly, [px, py]) {
@@ -38,6 +30,9 @@ function sdPoly(poly, [px, py]) {
   }
   return s * Math.sqrt(d);
 }
+
+// a plate's outline with its openings: inside the outline and outside every hole
+const plate2 = (q, pt) => (q.holes || []).reduce((d, h) => Math.max(d, -sdPoly(h, pt)), sdPoly(q.outline, pt));
 
 // Round parts are built along +y and turned onto their axis exactly like the viewer does (Quaternion.setFromUnitVectors).
 function fromY(axis) {
@@ -165,10 +160,11 @@ function prim(q) {
     const gu = steps(hi - lo, 20, 1, 12), gv = steps(hi2 - lo2, 20, 1, 12);
     for (let i = 0; i <= gu; i++) for (let j = 0; j <= gv; j++) {
       const u = lo + ((hi - lo) * i) / gu, v = lo2 + ((hi2 - lo2) * j) / gv;
-      if (sdPoly(q.outline, [u, v]) < 0) for (const w of [-q.thick / 2, q.thick / 2]) out.push(at(u, v, w));
+      if (plate2(q, [u, v]) < 0) for (const w of [-q.thick / 2, q.thick / 2]) out.push(at(u, v, w));
     }
+    for (const h of q.holes || []) for (const [u, v] of dense(h, 15)) for (const w of [-q.thick / 2, 0, q.thick / 2]) out.push(at(u, v, w));
     return { samples: out, sdf: p => {
-      const d = sub(p, q.at), dw = Math.abs(dot(d, W)) - q.thick / 2, d2 = sdPoly(q.outline, [dot(d, U), dot(d, V)]);
+      const d = sub(p, q.at), dw = Math.abs(dot(d, W)) - q.thick / 2, d2 = plate2(q, [dot(d, U), dot(d, V)]);
       return Math.min(Math.max(d2, dw), 0) + Math.hypot(Math.max(d2, 0), Math.max(dw, 0));
     } };
   }

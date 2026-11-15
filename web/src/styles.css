@@ -4,7 +4,7 @@
   --accent: #FFB300; --accent-ink: #2A1E00; --wood: #D6B98E; --edge: #2A2520;
   --warn: #B3261E; --warn-bg: #FCE8E6; --ok: #1E7A46;
   --stage-top: #F4F5F1; --stage-bot: #DADDD6;
-  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-display: "Archivo Variable", "Archivo", "Arial Narrow", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
   color-scheme: light;
@@ -24,13 +24,12 @@ body {
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
 }
 button { font-family: inherit }
-button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+/* dark ring with a yellow halo: visible on light and dark backgrounds and on yellow buttons (3:1 or more) */
+button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible, canvas:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; box-shadow: 0 0 0 7px var(--accent) }
 .wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px }
 
 header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap }
-.brand { display: flex; align-items: center; gap: 10px; cursor: pointer; background: none; border: 0; color: inherit; padding: 0; text-align: left }
-.brand h1 { font-family: var(--f-display); font-stretch: 75%; font-weight: 800; font-size: 26px; margin: 0; line-height: 1 }
-.brand small { display: block; color: var(--muted); font-size: 13px }
+.product .tag { display: inline-block; margin-bottom: 8px }
 .tag { font-family: var(--f-display); font-stretch: 80%; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink); padding: 3px 8px; border-radius: 6px; font-weight: 700 }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--f-body); padding: 12px 16px; border-radius: 12px; cursor: pointer; min-height: 48px; text-decoration: none }
@@ -44,7 +43,7 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .row > .btn { flex: 1 1 160px }
 
 /* ---------- home / scan ---------- */
-.home { display: grid; gap: 16px; grid-template-columns: 1fr }
+.home { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start }
 @media (min-width: 900px) { .home { grid-template-columns: 1.15fr .85fr } }
 .camera { position: relative; border-radius: 16px; overflow: hidden; background: #0d0f11; aspect-ratio: 3 / 4; max-height: 62vh; max-width: 100%; margin: 0 auto; width: 100% }
 .camera video { width: 100%; height: 100%; object-fit: cover; display: block }
@@ -96,13 +95,13 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .info b { font-family: var(--f-mono) }
 .hint { position: absolute; left: 12px; bottom: 12px; font-size: 12px; color: var(--muted); pointer-events: none }
 .side { display: flex; flex-direction: column; gap: 14px; min-width: 0 }
-.product h2 { font-family: var(--f-display); font-stretch: 72%; font-weight: 800; font-size: clamp(26px, 5vw, 36px); line-height: 1; margin: 0; text-transform: uppercase; text-wrap: balance }
+.product h1 { font-family: var(--f-display); font-stretch: 72%; font-weight: 800; font-size: clamp(26px, 5vw, 36px); line-height: 1; margin: 0; text-transform: uppercase; text-wrap: balance }
 .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px }
 .meta span { font-size: 13px; color: var(--muted); background: var(--sunk); padding: 4px 10px; border-radius: 999px }
 .progress { display: flex; gap: 4px }
-.progress button { flex: 1; height: 8px; border: 0; border-radius: 4px; background: var(--line); cursor: pointer; padding: 0 }
-.progress button.done { background: var(--muted) }
-.progress button.cur { background: var(--accent) }
+.progress button { flex: 1; height: 24px; border: 0; border-radius: 4px; background: var(--line); background-clip: content-box; padding: 8px 0; cursor: pointer; min-width: 0 }
+.progress button.done { background-color: var(--muted) }
+.progress button.cur { background-color: var(--accent) }
 .step-head { display: flex; gap: 14px; align-items: flex-start }
 .num { font-family: var(--f-display); font-stretch: 62%; font-weight: 800; font-size: 60px; line-height: .8; font-variant-numeric: tabular-nums; flex: none }
 .num small { font-size: 20px; color: var(--muted); font-weight: 600 }
@@ -123,8 +122,19 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .callout.check summary { cursor: pointer; color: var(--fg); font-weight: 600 }
 .callout.check ul { margin: 6px 0 0; padding-left: 18px }
 .conf { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px }
+.mpage { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px }
+.mpage summary { cursor: pointer; font-weight: 600 }
+.mpage img { display: block; width: 100%; margin-top: 8px; border-radius: 8px; background: #fff; min-height: 120px }
 .conf i { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
-.nav { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px }
+.nav { display: grid; grid-template-columns: 1fr auto 1.5fr; gap: 10px; align-items: center }
+.nav-n { font: 700 14px var(--f-mono); color: var(--muted); min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums }
+/* phones: Back / Next stay at the bottom of the screen, so the 3D view and the buttons are always both in reach */
+@media (max-width: 959px) {
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line) }
+  body[data-view="build"] { padding-bottom: 96px }
+  /* what keyboard focus scrolls to stays above the bar */
+  html:has(body[data-view="build"]) { scroll-padding-bottom: 96px }
+}
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px }
 .pc { border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); min-width: 0; position: relative }
 .pc.on { border: 2px solid var(--accent); padding: 9px }
@@ -151,3 +161,78 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .cal input { width: 100% }
 .cardbox { border: 2px solid var(--fg); border-radius: 8px; display: grid; place-items: center; font: 700 12px var(--f-mono); color: var(--muted); max-width: 100% }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none } }
+
+/* ---------- shared bits added with the landing page ---------- */
+a { color: inherit }
+.skip { position: absolute; left: 12px; top: -60px; z-index: 50; background: var(--fg); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-weight: 700 }
+.skip:focus { top: 12px }
+main:focus { outline: none }
+.btn.small { min-height: 40px; padding: 8px 14px; font-size: 14px; border-radius: 10px }
+.btn.big { min-height: 54px; padding: 14px 22px; font-size: 16px }
+.btn.wide { width: 100% }
+.fine { font-size: 13px; color: var(--muted); margin: 0 }
+.fine a, .muted a { color: var(--fg); text-underline-offset: 2px }
+.narrow { max-width: 480px; margin: 4vh auto 0; width: 100% }
+.h1s { font-family: var(--f-display); font-stretch: 80%; font-weight: 800; font-size: 30px; line-height: 1.05; margin: 0 0 8px; text-wrap: balance }
+.field-l { display: block; font-weight: 700; font-size: 15px; margin: 6px 0 6px }
+.field { width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); font: 17px var(--f-body); padding: 12px 14px; min-height: 52px }
+.field:focus { border-color: var(--fg) }
+.field-err { color: var(--warn); font-size: 14px; margin: 6px 0 10px; min-height: 1em }
+.field-err:empty { margin: 4px 0 }
+#si-form-box, #si-sent, #si-verify { display: flex; flex-direction: column; gap: 10px }
+#si-form-box > p, #si-sent > p, #si-verify > p { margin: 0 }
+.notice { background: var(--sunk); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start }
+.notice p { margin: 0 }
+
+/* header */
+.topnav { display: flex; align-items: center; gap: 8px }
+.topnav .links { display: flex; gap: 2px }
+.navlink { background: none; border: 0; color: var(--fg); font: 700 15px var(--f-body); padding: 10px 12px; border-radius: 10px; cursor: pointer }
+.navlink:hover { background: var(--sunk) }
+@media (max-width: 720px) { .topnav .links { display: none !important } }
+.acct { position: relative }
+.acct-btn { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); font: 700 17px var(--f-display); cursor: pointer }
+.menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; min-width: 250px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.18); display: flex; flex-direction: column }
+.menu-who { margin: 0; padding: 8px 10px 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px; overflow-wrap: anywhere }
+.menu [role=menuitem] { display: block; text-align: left; background: none; border: 0; color: var(--fg); font: 15px var(--f-body); padding: 10px; border-radius: 9px; cursor: pointer; text-decoration: none }
+.menu [role=menuitem]:hover, .menu [role=menuitem]:focus-visible { background: var(--sunk); outline: none }
+.menu .danger { color: var(--warn) }
+
+/* my guides */
+.side-col { display: flex; flex-direction: column; gap: 16px; min-width: 0 }
+.tips { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; color: var(--muted) }
+.gitem { padding: 0; overflow: hidden; cursor: default }
+.gitem > a { flex: 1; min-width: 0; padding: 10px 12px; color: inherit; text-decoration: none; display: block }
+.gitem > a:hover b { text-decoration: underline; text-underline-offset: 2px }
+.gitem b { overflow-wrap: anywhere }
+.gdel { flex: none; width: 44px; height: 44px; margin-right: 4px; border: 0; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center }
+.gdel:hover { background: var(--warn-bg); color: var(--warn) }
+
+/* build */
+.back { align-self: flex-start; display: inline-block; margin: -4px 0 10px; font-weight: 700; text-decoration: none; color: var(--muted); padding: 6px 0 }
+.back:hover { color: var(--fg) }
+.ask-signin { margin: 0; font-size: 15px }
+
+/* legal and messages */
+.prose { max-width: 720px; gap: 10px }
+.prose h2 { font-family: var(--f-display); font-stretch: 85%; font-weight: 800; font-size: 20px; margin: 14px 0 0 }
+.prose p, .prose ul { margin: 0 }
+.prose li { margin: 4px 0 }
+.draft { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 14px }
+
+.foot { display: flex; justify-content: space-between; gap: 10px 20px; flex-wrap: wrap; font-size: 14px; color: var(--muted); padding: 12px 4px 0; border-top: 1px solid var(--line); margin-top: 12px }
+.foot nav { display: flex; gap: 16px }
+.foot a { color: var(--muted) }
+.field[aria-invalid="true"] { border-color: var(--warn) }
+.old { margin-top: 10px }
+.old summary { cursor: pointer; color: var(--muted); font-weight: 700; font-size: 14px; padding: 6px 0 }
+.old .guides { margin-top: 8px }
+/* phones: scanning first, unless there are guides to come back to */
+@media (max-width: 899px) { .home:not(.has-guides) .side-col { order: -1 } }
+@media (min-width: 900px) { .home .side-col { position: sticky; top: 12px } }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0 }
+@media (max-width: 600px) {
+  /* the part info box and the drag hint sit above the view buttons, not under them */
+  .info, .hint { bottom: 62px }
+}
+.progress { margin: -8px 0 }

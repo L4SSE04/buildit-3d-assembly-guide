@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 // Chrome: RENDER_BROWSER, else the newest Chromium that Playwright has downloaded (npx playwright-core install chromium)
-function findBrowser() {
+export function findBrowser() {
   if (process.env.RENDER_BROWSER) return process.env.RENDER_BROWSER;
   const roots = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright'), path.join(os.homedir(), '.cache', 'ms-playwright')].filter(Boolean);
   const inside = ['chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing', 'chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',

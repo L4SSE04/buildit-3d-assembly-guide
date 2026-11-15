@@ -8,6 +8,10 @@ import { PANEL } from '../guide.js';
 const PI = Math.PI;
 const DUR = 1.3;
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+// dark parts need a stronger glow, or the yellow mixes with the black into brown and the part looks brown
+const glowGain = m => { const c = m.color || new THREE.Color(1, 1, 1), l = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; return 1 + 2.6 * Math.max(0, 0.6 - l); };
+// head height of a screw or bolt, as the hardware models draw it (parts3d.js)
+const headHeight = p => p.kind === 'allen_bolt' ? (p.d_mm || 6) : p.kind === 'bolt' ? (p.d_mm || 6) * 0.66 : 1.7 * (p.d_mm || 3.8) / 3.8;
 const UP_ROT = { '+y': [0, 0, 0], '-y': [PI, 0, 0], '+x': [0, 0, PI / 2], '-x': [0, 0, -PI / 2], '+z': [-PI / 2, 0, 0], '-z': [PI / 2, 0, 0] };
 
 export class Viewer {
@@ -52,7 +56,9 @@ export class Viewer {
     });
 
     this.resize(); addEventListener('resize', () => { this.resize(); this.goCam(true); });
-    const loop = now => { requestAnimationFrame(loop); this.frame(now); };
+    // paused while its screen is hidden, so two viewers (landing page, build screen) never both draw
+    this.paused = false;
+    const loop = now => { requestAnimationFrame(loop); if (!this.paused) this.frame(now); };
     requestAnimationFrame(loop);
   }
 
@@ -60,7 +66,7 @@ export class Viewer {
   load(guide) {
     this.guide = guide; this.N = guide.steps.length;
     while (this.root.children.length) this.root.remove(this.root.children[0]);
-    this.objs = []; this.byKey = {};
+    this.objs = []; this.byKey = {}; this.matCache = {};
     const P = guide.parts;
 
     // holes per panel: explicit + made by hardware
@@ -103,11 +109,47 @@ export class Viewer {
       cx += w + 60; rowDepth = Math.max(rowDepth, d);
     }
 
+    // groups the manual builds in another position (lying flat, on its back): one turn for the whole group, then
+    // set down on the floor under its final place (or at its pos). Each board uses it from its own step until "until".
+    const worldBox = it => new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(), new THREE.Vector3(...it.size))
+      .applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(...it.p.pos), it.Q, new THREE.Vector3(1, 1, 1)));
+    const corners = b => [0, 1, 2, 3, 4, 5, 6, 7].map(i => new THREE.Vector3(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z));
+    // a group set down under its final place must not sink into parts that are already standing there
+    // (the seat turned upside down on top of the chair base): then it goes beside the build, groups side by side
+    const offFloorBefore = (key, until) => panels.filter(it => it.p.key !== key && it.p.step < until);
+    let besideX = this.finalBox.max.x + 250;
+    const poses = (guide.groups || []).map(gr => {
+      const mem = panels.filter(it => gr.panels.includes(it.p.key));
+      if (!mem.length) return null;
+      const box = new THREE.Box3(); mem.forEach(it => box.union(worldBox(it)));
+      const c = box.getCenter(new THREE.Vector3());
+      const Rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(...gr.rot.map(d => (d * PI) / 180)));
+      const rb = new THREE.Box3(); mem.forEach(it => corners(worldBox(it)).forEach(v => rb.expandByPoint(v.sub(c).applyQuaternion(Rq))));
+      const rc = rb.getCenter(new THREE.Vector3());
+      let to = gr.pos ? new THREE.Vector3(...gr.pos) : c;
+      const at = t => rb.clone().translate(new THREE.Vector3(t.x - rc.x, -rb.min.y, t.z - rc.z));
+      const others = offFloorBefore(null, gr.until).filter(it => !gr.panels.includes(it.p.key)).map(worldBox);
+      if (!gr.pos && others.some(b => b.clone().expandByScalar(-2).intersectsBox(at(to)))) {
+        const w = rb.max.x - rb.min.x; to = new THREE.Vector3(besideX + w / 2, 0, c.z); besideX += w + 250;
+      }
+      const shift = new THREE.Vector3(to.x - rc.x, -rb.min.y, to.z - rc.z);
+      return { gr, place: it => ({ P: new THREE.Vector3(...it.p.pos).sub(c).applyQuaternion(Rq).add(shift), Q: Rq.clone().multiply(it.Q) }) };
+    }).filter(Boolean);
+    const keyframes = it => {
+      const final = { P: new THREE.Vector3(...it.p.pos), Q: it.Q };
+      const mine = poses.filter(x => x.gr.panels.includes(it.p.key) && x.gr.until > it.p.step).sort((a, b) => a.gr.until - b.gr.until);
+      const kfs = [{ s: 0, P: it.trayP, Q: it.trayQ }];
+      let s = it.p.step;
+      for (const x of mine) { if (x.gr.until <= s && kfs.length > 1) continue; kfs.push({ s, ...x.place(it) }); s = x.gr.until; }
+      kfs.push({ s, ...final });
+      return kfs;
+    };
+
     for (const it of panels) {
       const part = P[it.p.part];
       const o = this.addObj({ key: it.p.key, part: it.p.part, kind: PANEL, parent: null, size: it.size,
         build: () => makeBody(part, holesOf[it.p.key], this.M),
-        kfs: [{ s: 0, P: it.trayP, Q: it.trayQ }, { s: it.p.step, P: new THREE.Vector3(...it.p.pos), Q: it.Q }], arc: 260 });
+        kfs: keyframes(it), arc: 260 });
       let ghost;
       if (part.shape) {
         // see-through copy of the real shape, so a curved part shows where it is going
@@ -127,16 +169,25 @@ export class Viewer {
     // a washer at the same spot as a screw or bolt: the screw head sits on top of it
     const atOf = h => (shapedOf[h.panel] ? h.at : snapToFace(h.at, h.dir, sizeOf[h.panel]));
     const washers = guide.hardware.filter(h => P[h.part].kind === 'washer');
+    // one model per part, copied for every piece: the copies share their geometry, so hundreds of screws stay light
+    const models = {};
+    const modelOf = part => { const t = models[part] ||= makeHardware(P[part].kind, this.M, { len: P[part].len_mm, d: P[part].d_mm }, P[part]); return { group: t.group.clone(true), spinnable: t.spinnable }; };
     for (const h of guide.hardware) {
       const part = P[h.part], kind = part.kind, at = atOf(h);
       const Q = dirQuat(h.dir).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (h.roll * PI) / 180));
       const Pp = new THREE.Vector3(...at);
-      if (['screw', 'bolt', 'allen_bolt'].includes(kind)) {
-        const w = washers.find(x => x.panel === h.panel && x.dir === h.dir && Math.hypot(...atOf(x).map((v, i) => v - at[i])) < 3);
+      const sameSpot = x => x.panel === h.panel && x.dir === h.dir && Math.hypot(...atOf(x).map((v, i) => v - at[i])) < 3;
+      if (['screw', 'bolt', 'allen_bolt', 'cap'].includes(kind)) {
+        const w = washers.find(sameSpot);
         if (w) Pp.add(dirVec(h.dir).multiplyScalar(washerThick(P[w.part].d_mm || 12)));
       }
+      if (kind === 'cap') {
+        // a cover cap sits on the head of the bolt or screw in the same hole, not inside it
+        const b = guide.hardware.find(x => x !== h && ['screw', 'bolt', 'allen_bolt'].includes(P[x.part].kind) && sameSpot(x));
+        if (b) Pp.add(dirVec(h.dir).multiplyScalar(headHeight(P[b.part])));
+      }
       const from = Pp.clone().add(dirVec(h.dir).multiplyScalar(kind === 'nail' ? 45 : 65 + (part.len_mm || 0) * 0.6));
-      const o = this.addObj({ key: h.key, part: h.part, kind, parent: h.panel, build: () => makeHardware(kind, this.M, { len: part.len_mm, d: part.d_mm }),
+      const o = this.addObj({ key: h.key, part: h.part, kind, parent: h.panel, build: () => modelOf(h.part), matKey: `${h.part}|${h.step}`,
         kfs: [{ s: h.step, P: Pp, Q, fromP: from }], turnStep: h.turn_step });
       o.outDir = dirVec(h.dir);
     }
@@ -161,10 +212,14 @@ export class Viewer {
     o.inner = built.group || built; o.spinnable = !!built.spinnable;
     o.group.add(o.inner); o.group.userData.obj = o;
     o.mats = [];
+    // each object gets its own materials so it can glow on its own; pieces of the same part that come in the same step
+    // glow together, so they share them (fewer materials for the GPU to switch between)
+    const shared = o.matKey ? (this.matCache[o.matKey] ||= new Map()) : null;
+    const own = x => { let c = shared?.get(x); if (!c) { c = x.clone(); shared?.set(x, c); } return c; };
     o.inner.traverse(m => {
       if (!m.isMesh || m.material === this.M.hole) return;
-      m.material = Array.isArray(m.material) ? m.material.map(x => x.clone()) : m.material.clone();
-      [].concat(m.material).forEach(x => x.emissive && o.mats.push(x));
+      m.material = Array.isArray(m.material) ? m.material.map(own) : own(m.material);
+      [].concat(m.material).forEach(x => x.emissive && !o.mats.includes(x) && o.mats.push(x));
     });
     (o.parent ? this.byKey[o.parent].group : this.root).add(o.group);
     this.objs.push(o); this.byKey[o.key] = o; o.delay = 0;
@@ -175,7 +230,7 @@ export class Viewer {
   planSteps() {
     this.plan = [];
     for (let s = 0; s <= this.N; s++) {
-      const moving = this.objs.filter(o => o.kind === PANEL && o.kfs[1]?.s === s && s > 0);
+      const moving = this.objs.filter(o => o.kind === PANEL && s > 0 && o.kfs.some((k, i) => i > 0 && k.s === s));
       const added = this.objs.filter(o => o.kind !== PANEL && o.kfs[0].s === s);
       const turning = this.objs.filter(o => o.turnStep === s);
       moving.forEach((o, i) => (o.delay = i * 0.3));
@@ -206,23 +261,32 @@ export class Viewer {
       const pl = this.plan[s];
       const focus = s === 0 ? this.objs.filter(o => o.kind === PANEL) : [...pl.moving, ...pl.added, ...pl.turning];
       const all = this.objs.filter(o => o.group.visible);
-      const placed = all.filter(o => o.kind !== PANEL || !o.kfs[1] || o.kfs[1].s <= s);
+      const placed = all.filter(o => o.kind !== PANEL || !o.kfs[1] || o.kfs[1].s <= s); // off the floor: fitted or in its group
       const wide = this.boxOf(all.length ? all : this.objs);
       const outs = [...pl.added, ...pl.turning].map(o => o.outDir.clone().applyQuaternion(o.group.parent.getWorldQuaternion(new THREE.Quaternion())));
       const avg = outs.reduce((a, v) => a.add(v), new THREE.Vector3());
       let dir = new THREE.Vector3(0.45, 0.62, 0.85);
       if (avg.length() > 0.3 * outs.length && outs.length) { avg.normalize(); dir = avg.clone().multiplyScalar(1.1).add(new THREE.Vector3(0.3, 0.55, 0.35)); if (avg.y > 0.8) dir.add(new THREE.Vector3(0.1, 0, 0.6)); }
       if (s === 0) dir = new THREE.Vector3(0, 0.8, 0.62);
-      const fbox = this.boxOf(focus.length ? focus : all);
+      const fbox = this.boxOf(focus.length ? focus : s > 0 && placed.length ? placed : all); // nothing new: look at what is built
       const cam = { wide: this.camFrom(s === 0 ? fbox : focus.length && pl.moving.length ? wide : fbox.union ? fbox : wide, dir, 1.05) };
       if (s > 0 && !pl.moving.length && (pl.added.length || pl.turning.length)) {
         const first = (pl.added[0] || pl.turning[0]);
         const p0 = first.group.getWorldPosition(new THREE.Vector3());
         const near = [...pl.added, ...pl.turning].filter(o => o.group.getWorldPosition(new THREE.Vector3()).distanceTo(p0) < 0.16);
-        cam.detail = this.camFrom(this.boxOf(near), dir, 2.4, 0.09);
+        // close-up with context: the fittings plus the part of their board around them (up to 25 cm each way),
+        // so it is clear which board and which edge they go into
+        const nb = this.boxOf(near), ctx = nb.clone();
+        new Set(near.map(o => o.parent)).forEach(k => { const b = this.byKey[k]; if (b) ctx.union(this.boxOf([b]).intersect(nb.clone().expandByScalar(0.25))); });
+        // look at the face these fittings go into (caps on both sides of a chair would otherwise average to "from the front")
+        const outsNear = near.map(o => o.outDir.clone().applyQuaternion(o.group.parent.getWorldQuaternion(new THREE.Quaternion())));
+        const an = outsNear.reduce((a, v) => a.add(v), new THREE.Vector3());
+        const dNear = an.length() > 0.5 * outsNear.length ? an.normalize().multiplyScalar(1.1).add(new THREE.Vector3(0.3, 0.55, 0.35)) : dir;
+        cam.detail = this.camFrom(ctx, dNear, 1.5, 0.14);
         cam.wide = this.camFrom(fbox.clone().union(this.boxOf(near)), dir, 1.1);
       }
-      if (s > 0 && pl.moving.length) cam.wide = this.camFrom(this.boxOf(placed), new THREE.Vector3(0.75, 0.48, 0.85).add(pl.moving.some(o => o.kfs[1].P.z < this.finalBox.min.z + 10) ? new THREE.Vector3(-1.4, 0, -1.6) : new THREE.Vector3()), 1.05);
+      const kfAt = o => o.kfs.find(k => k.s === s) || o.kfs[o.kfs.length - 1];
+      if (s > 0 && pl.moving.length) cam.wide = this.camFrom(this.boxOf(placed), new THREE.Vector3(0.75, 0.48, 0.85).add(pl.moving.some(o => kfAt(o).P.z < this.finalBox.min.z + 10) ? new THREE.Vector3(-1.4, 0, -1.6) : new THREE.Vector3()), 1.05);
       pl.cam = cam;
     }
   }
@@ -252,7 +316,7 @@ export class Viewer {
         const tp = s > o.turnStep ? 1 : s < o.turnStep ? 0 : this.RM ? 1 : ease(Math.min(1, Math.max(0, (el - o.delay) / DUR)));
         o.inner.rotation.x = -PI * tp;
       }
-      if (o.ghost) o.ghost.visible = s === o.kfs[1]?.s && s > 0 && !this.RM && el < o.delay + DUR * 0.98;
+      if (o.ghost) o.ghost.visible = s === o.kfs[o.kfs.length - 1].s && s > 0 && !this.RM && el < o.delay + DUR * 0.98;
     }
     (this.turnArrows || []).forEach(t => (t.a.visible = t.s === s));
     if (this.wall) this.wall.visible = s >= this.guide.scene.wall_step;
@@ -269,7 +333,7 @@ export class Viewer {
     for (const o of this.objs) {
       const glow = this.cur > 0 && fresh.has(o) ? (o.kind === PANEL ? 0.05 + 0.1 * pulse : 0.2 + 0.3 * pulse) : 0;
       const f = this.flash && this.flash.part === o.part && now < this.flash.until ? 0.55 * pulse + 0.2 : 0;
-      o.mats.forEach(m => m.emissive.copy(acc).multiplyScalar(Math.max(glow, f)));
+      o.mats.forEach(m => m.emissive.copy(acc).multiplyScalar(Math.max(glow, f) * (m.userData.glowGain ??= glowGain(m))));
     }
     if (this.tween) {
       const p = Math.min(1, (now - this.tween.start) / 900), e = ease(p);
@@ -342,7 +406,7 @@ export class Viewer {
         const inst = this.guide.panels.find(p => p.part === id);
         obj = makeBody(part, inst ? this.holesOf[inst.key] : [], this.M);
         const o = this.objs.find(x => x.key === inst?.key); if (o) obj.quaternion.copy(o.kfs[0].Q);
-      } else { obj = makeHardware(part.kind, this.M, { len: part.len_mm, d: part.d_mm }).group; obj.rotation.set(0.35, -0.5, part.kind === 'cam_lock' ? PI / 2 + 0.3 : 0.25); }
+      } else { obj = makeHardware(part.kind, this.M, { len: part.len_mm, d: part.d_mm }, part).group; obj.rotation.set(0.35, -0.5, part.kind === 'cam_lock' ? PI / 2 + 0.3 : 0.25); }
       const holder = new THREE.Group(); holder.add(obj); ts.add(holder);
       const box = new THREE.Box3().setFromObject(holder), c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3()).length();
       const dir = part.kind === PANEL ? new THREE.Vector3(0.55, 1, 1.15) : new THREE.Vector3(0.3, 0.55, 1);

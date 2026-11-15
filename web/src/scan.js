@@ -1,7 +1,8 @@
 // Scanning: live phone camera (needs https or localhost), photo/video upload, and sending pages to the server.
+import { api } from './api.js';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const MAX_PAGES = 30;
+const MAX_PAGES = 60;
 let pages = []; // {blob, url} for photos, {blob, pdf: {name, pages}} for a PDF manual
 const MAX_PDF_MB = 24; // Claude takes up to 32 MB per request; the PDF grows by a third when encoded
 let stream = null, ctl = null, onGuide = null;
@@ -139,9 +140,11 @@ $('analyze').onclick = async () => {
   const n = pages.reduce((s, p) => s + (p.pdf ? p.pdf.pages || 1 : 1), 0);
   setStatus(`Reading ${n} page${n > 1 ? 's' : ''}. This usually takes 1–3 minutes.`, 'busy');
   const fd = new FormData(); pages.forEach((p, i) => fd.append('pages', p.blob, p.pdf ? p.pdf.name : `page-${i + 1}.jpg`));
+  // pictures made from a PDF are the manual's pages in order, so the guide can show page n next to its step
+  if (pages.length && pages.every(p => p.fromPdf)) fd.append('from_pdf', '1');
   try {
-    const r = await fetch('/api/analyze', { method: 'POST', body: fd, signal: ctl.signal });
-    if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || `Server error ${r.status}`); }
+    const r = await api('/api/analyze', { method: 'POST', body: fd, signal: ctl.signal });
+    if (!r.body) throw new Error('The server sent no reply. Try again.');
     const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '', done = null;
     for (;;) {
       const { value, done: end } = await reader.read(); if (end) break;
@@ -149,7 +152,7 @@ $('analyze').onclick = async () => {
       let nl; while ((nl = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1); if (!line) continue;
         const msg = JSON.parse(line);
-        if (msg.type === 'progress') setStatus(msg.phase === 'checking' ? 'Checking the 3D layout and fixing what does not fit…' : msg.phase === 'comparing' ? 'Comparing the 3D model with the drawings…' : msg.steps ? `Writing your guide… ${msg.steps} step${msg.steps > 1 ? 's' : ''} so far` : 'Reading the drawings…', 'busy');
+        if (msg.type === 'progress') setStatus(msg.phase === 'checking' ? 'Checking the 3D layout and fixing what does not fit…' : msg.phase === 'comparing' ? 'Comparing the 3D model with the drawings…' : msg.phase === 'thinking' ? 'Studying the drawings…' : msg.steps ? `Writing your guide… ${msg.steps} step${msg.steps > 1 ? 's' : ''} so far` : 'Reading the drawings…', 'busy');
         if (msg.type === 'error') throw Object.assign(new Error(msg.error), { code: msg.code, detail: msg.detail });
         if (msg.type === 'done') done = msg;
       }
@@ -173,7 +176,7 @@ async function pdfAsPictures(reason) {
     for (const p of pages) {
       if (!p.pdf) { next.push(p); continue; }
       const { pages: imgs, total } = await pdfToJpegs(p.blob, MAX_PAGES - next.length);
-      imgs.forEach(b => next.push({ blob: b, url: URL.createObjectURL(b) }));
+      imgs.forEach(b => next.push({ blob: b, url: URL.createObjectURL(b), fromPdf: true }));
       if (total > imgs.length) setStatus(`Only the first ${imgs.length} of ${total} PDF pages fit in one scan.`, 'err');
     }
     pages = next; render();

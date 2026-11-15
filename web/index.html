@@ -3,65 +3,227 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#EDEFEA">
-  <title>Buildit</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <meta name="theme-color" content="#FFC400">
+  <title>Buildit · Flat-pack instructions in 3D</title>
+  <meta name="description" content="Buildit turns a flat-pack furniture manual into a 3D guide: every board and screw labelled, every step animated, viewable from any side.">
+  <meta property="og:title" content="Buildit · Flat-pack instructions in 3D">
+  <meta property="og:description" content="Photograph a flat-pack paper manual and get a 3D guide: every part labelled, every step animated.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
+<a class="skip" href="#main" id="skip">Skip to content</a>
 <div class="wrap">
   <header class="top">
-    <button class="brand" id="home-link" aria-label="Buildit home">
-      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="var(--accent)"/><path d="M11 27V13l9-4 9 4v14l-9 4z M11 13l9 4 9-4M20 17v14" fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linejoin="round"/></svg>
-      <div><h1>Buildit</h1><small>Scan a manual. Build it in 3D.</small></div>
-    </button>
-    <span class="tag" id="mode-tag" hidden>Example</span>
-  </header>
-
-  <!-- ===== HOME / SCAN ===== -->
-  <section id="view-home">
-    <div class="home">
-      <div class="card">
-        <h2>Scan your manual</h2>
-        <p class="muted" style="margin:0">Point the camera at one page at a time and tap the button. Start with the page that lists all the parts.</p>
-        <div class="camera" id="camera" hidden>
-          <video id="video" playsinline muted autoplay></video>
-          <div class="frame"></div><div class="flash" id="flash"></div>
-          <span class="count" id="cam-count">0 pages</span>
-          <button class="shutter" id="shutter" aria-label="Capture this page"></button>
-        </div>
-        <div class="row">
-          <button class="btn primary" id="cam-start">Open camera</button>
-          <label class="btn picker">Upload photos, video or PDF<input id="files" type="file" accept="image/*,video/*,application/pdf,.pdf" multiple></label>
-        </div>
-        <div>
-          <p class="lbl" id="pages-label">Pages · 0</p>
-          <div class="thumbs" id="thumbs"></div>
-          <div class="empty" id="thumbs-empty">No pages yet.</div>
-        </div>
-        <div class="status" id="status" aria-live="polite"></div>
-        <div class="row">
-          <button class="btn primary" id="analyze" disabled>Make my 3D guide</button>
-          <button class="btn" id="stop" hidden>Stop</button>
-          <button class="btn" id="clear" disabled>Clear pages</button>
+    <a class="brand" href="#/" aria-label="Buildit home">
+      <svg class="mark" width="38" height="38" viewBox="0 0 48 48" aria-hidden="true"><circle class="disc" cx="20" cy="28" r="15" fill="#FFC400"/><path d="M7 42L29 20a3 3 0 0 1 4.2 0L42 28.8" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linejoin="round"/></svg>
+      <span class="name">Buildit</span>
+    </a>
+    <nav class="topnav" id="topnav" aria-label="Main">
+      <span class="links" id="land-links">
+        <button class="navlink" data-scroll="how">How it works</button>
+        <button class="navlink" data-scroll="pricing">Pricing</button>
+        <button class="navlink" data-scroll="faq">Questions</button>
+      </span>
+      <a class="btn small" id="nav-signin" href="#/signin">Sign in</a>
+      <a class="btn small primary" id="nav-app" href="#/app" hidden>My guides</a>
+      <div class="acct" id="acct" hidden>
+        <button class="acct-btn" id="acct-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="acct-menu" aria-label="Account"><span id="acct-initial">?</span></button>
+        <div class="menu" id="acct-menu" role="menu" hidden>
+          <p class="menu-who" id="acct-email"></p>
+          <a role="menuitem" href="#/app">My guides</a>
+          <button role="menuitem" id="signout">Sign out</button>
+          <button role="menuitem" id="signout-all">Sign out on all devices</button>
+          <button role="menuitem" class="danger" id="delete-acct">Delete account…</button>
         </div>
       </div>
-      <div class="card">
-        <h2>Your guides</h2>
-        <div class="guides" id="guides"></div>
-        <p class="lbl" style="margin-top:6px">Tips for a good scan</p>
-        <ul class="muted" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:15px">
-          <li>Lay the manual flat in good light, no shadows on the drawings.</li>
-          <li>Fill the frame with one page, phone held straight above it.</li>
-          <li>Include the parts and hardware pages. They give the part letters and counts.</li>
-          <li>Pages can be in any order. Duplicates are fine.</li>
-        </ul>
+    </nav>
+  </header>
+
+<main id="main" tabindex="-1">
+  <!-- ===== LANDING ===== -->
+  <section id="view-landing" class="landing" hidden>
+    <div class="hero">
+      <div class="hero-text">
+        <h1>Build it right the first time.</h1>
+        <p class="lead">Photograph the paper manual that came in the box. Buildit turns its drawings into a 3D guide: each board and screw keeps the letter or number from your manual, and every step shows which parts to take, where they go and which way they face.</p>
+        <div class="acts">
+          <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.500M11 1.500l6 5.500-6 5.500" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></a>
+          <a class="btn big" id="cta-scan" href="#/signin">Get early access</a>
+        </div>
+        <p class="fine">The example is free and needs no account. Scanning your own manual opens soon.</p>
+      </div>
+      <figure class="stage" id="hero-stage">
+        <div class="model">
+          <canvas id="hero-canvas" aria-hidden="true"></canvas>
+          <div class="labels" id="hero-labels" aria-hidden="true"></div>
+        </div>
+        <figcaption class="stage-info" aria-live="off">
+          <div class="prog" id="hero-prog" aria-hidden="true"></div>
+          <p class="si-step"><b id="hero-step">Parts check</b><span id="hero-title"></span></p>
+          <p class="si-need-h">Take these parts</p>
+          <ul class="si-parts" id="hero-parts"></ul>
+        </figcaption>
+      </figure>
+    </div>
+
+    <section class="band dark" aria-labelledby="feat-h">
+      <h2 id="feat-h" class="sr">What a guide gives you</h2>
+      <ul class="feats">
+        <li><h3>Every part labelled</h3><p>Part letters and counts come from your manual, with a picture of each board and fitting to hold your real parts against.</p></li>
+        <li><h3>Screws at actual size</h3><p>Lay a real screw on your phone screen to tell two similar ones apart. Calibrated once with a bank card.</p></li>
+        <li><h3>The manual page beside each step</h3><p>In guides made from your manual, open the original drawing next to the 3D view and compare the two.</p></li>
+        <li><h3>Ask when you're stuck</h3><p>Type a question about the step you're on and get a short, plain answer.</p></li>
+      </ul>
+    </section>
+
+    <section class="band" id="how" aria-labelledby="how-h">
+      <h2 id="how-h">How it works</h2>
+      <ol class="steps">
+        <li><span class="n" aria-hidden="true">1</span><h3>Photograph the pages</h3><p>Use your phone camera, one page at a time. Or upload the PDF from the maker's website.</p></li>
+        <li><span class="n" aria-hidden="true">2</span><h3>Buildit reads the drawings</h3><p>It finds every board and fitting and works out where each one goes. A long manual can take ten minutes or more.</p></li>
+        <li><span class="n" aria-hidden="true">3</span><h3>Build it step by step</h3><p>Each step plays in 3D. What's new is marked in yellow. Turn and zoom to see it from your side.</p></li>
+      </ol>
+    </section>
+
+    <section class="band dark honest" aria-labelledby="honest-h">
+      <div>
+        <h2 id="honest-h">Honest about mistakes</h2>
+        <p>Reading drawings is hard, for people and for software. Buildit checks its own 3D model and marks the steps where it may be wrong. Keep the paper manual nearby and follow it when the two disagree.</p>
+      </div>
+      <figure class="demo">
+        <div class="callout check"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg><span>The 3D view may be wrong in this step. Follow the paper manual if they differ.</span></div>
+        <figcaption>What you see on a step it's unsure about.</figcaption>
+      </figure>
+    </section>
+
+    <section class="band" id="pricing" aria-labelledby="price-h">
+      <h2 id="price-h">Pricing</h2>
+      <p class="sub">No subscription. Paid scans open soon: you pay once per manual.</p>
+      <ul class="prices">
+        <li><div><h3>Ready-made guides <span class="soon">Coming soon</span></h3><p>A library of guides for popular furniture, each one checked by a person against the paper manual. No account needed. For now there is one example guide to try.</p></div><b>Free</b></li>
+        <li><div><h3>Your own manual, up to 16 pages <span class="soon">Opening soon</span></h3></div><b>£1.99</b></li>
+        <li><div><h3>Up to 32 pages</h3></div><b>£2.99</b></li>
+        <li><div><h3>Up to 60 pages</h3></div><b>£4.99</b></li>
+      </ul>
+      <p class="fine">Prices are planned and may change before launch. In euros: from €1.99. Your guide stays in your account; delete it any time.</p>
+    </section>
+
+    <section class="band light" id="faq" aria-labelledby="faq-h">
+      <h2 id="faq-h">Questions</h2>
+      <div class="faq">
+        <details><summary>Which furniture works?</summary><p>Flat-pack furniture that comes with a drawn, step-by-step manual: shelves, wardrobes, chests of drawers, desks and chairs. Most flat-pack brands draw their manuals the same way. Products with motors or electronics are not supported.</p></details>
+        <details><summary>How accurate is it?</summary><p>Not perfect yet. Parts lists usually come out right; the 3D steps are right more often than not, but some will be wrong. Buildit marks the steps it is unsure about, and you can open the matching manual page next to each step. When the two disagree, follow the paper manual.</p></details>
+        <details><summary>What is early access?</summary><p>Scanning your own manual is not open to everyone yet. Create an account now and we'll email you once when it opens. Nothing else, and no payment until then.</p></details>
+        <details><summary>Do I need an account?</summary><p>Not to try the example. You need one to scan your own manual, so your guides are kept for you. You sign in with a link sent to your email. There is no password to remember.</p></details>
+        <details><summary>What happens to the pages I upload?</summary><p>They are sent to an AI model that reads the drawings, and kept with your guide so you can compare each step with the original page. When you delete a guide or your account, its pages are deleted too.</p></details>
+        <details><summary>Is Buildit made by a furniture company?</summary><p>No. Buildit is independent and not connected with any furniture brand or shop.</p></details>
+      </div>
+    </section>
+
+    <section class="band closer" aria-labelledby="close-h">
+      <h2 id="close-h">See it on a real build.</h2>
+      <div class="acts">
+        <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.500M11 1.500l6 5.500-6 5.500" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></a>
+        <a class="btn big" id="cta-scan2" href="#/signin">Get early access</a>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== SIGN IN ===== -->
+  <section id="view-signin" hidden>
+    <div class="narrow card" id="signin-card">
+      <div id="si-form-box">
+        <h1 class="h1s">Sign in</h1>
+        <p class="muted">We'll email you a link to sign in. No password needed. New here? The same link creates your account.</p>
+        <form id="si-form" novalidate>
+          <label class="field-l" for="si-email">Email address</label>
+          <input class="field" id="si-email" name="email" type="email" autocomplete="email" inputmode="email" required spellcheck="false" placeholder="you@example.com" aria-describedby="si-err">
+          <p class="field-err" id="si-err" role="alert"></p>
+          <button class="btn primary wide" id="si-send" type="submit">Email me a sign-in link</button>
+        </form>
+        <p class="fine">By signing in you agree to how we handle your data in the <a href="#/privacy">privacy notice</a>.</p>
+      </div>
+      <div id="si-sent" hidden>
+        <h1 class="h1s">Check your email</h1>
+        <p>We sent a sign-in link to <b id="si-to"></b>. Open it on this device or any other. It works once, for 15 minutes.</p>
+        <p class="muted">Nothing there after a minute? Look in your spam folder.</p>
+        <div class="row"><button class="btn" id="si-again">Use a different email</button><button class="btn" id="si-resend" disabled>Send again</button></div>
+      </div>
+      <div id="si-verify" hidden>
+        <h1 class="h1s">Sign in to Buildit</h1>
+        <p class="muted" id="si-vtext">You opened a sign-in link. Tap the button to finish signing in on this device.</p>
+        <p class="field-err" id="si-verr" role="alert"></p>
+        <button class="btn primary wide" id="si-continue">Continue</button>
       </div>
     </div>
   </section>
 
+  <!-- ===== MY GUIDES / SCAN ===== -->
+  <section id="view-home" hidden>
+    <div class="home">
+      <div class="card" id="guides-card">
+        <h2 id="guides-h">Your guides</h2>
+        <div class="guides" id="guides"></div>
+      </div>
+      <div class="side-col">
+        <div class="card" id="scan-card">
+          <h2>Scan a manual</h2>
+          <div id="scan-closed" class="notice" hidden>
+            <p><b>You're on the early-access list.</b> Scanning your own manual opens soon, and we'll email you once when it does. Meanwhile, the example guide shows how a finished guide works.</p>
+            <a class="btn" href="#/guide/example-bookcase">Open the example</a>
+          </div>
+          <div id="scan-open">
+          <p class="muted" style="margin:0">Point the camera at one page at a time and tap the button. Start with the page that lists all the parts. Or upload the manual's PDF.</p>
+          <div class="camera" id="camera" hidden>
+            <video id="video" playsinline muted autoplay></video>
+            <div class="frame"></div><div class="flash" id="flash"></div>
+            <span class="count" id="cam-count">0 pages</span>
+            <button class="shutter" id="shutter" aria-label="Capture this page"></button>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="cam-start">Open camera</button>
+            <label class="btn picker">Upload photos, video or PDF<input id="files" type="file" accept="image/*,video/*,application/pdf,.pdf" multiple></label>
+          </div>
+          <div>
+            <p class="lbl" id="pages-label">Pages · 0</p>
+            <div class="thumbs" id="thumbs"></div>
+            <div class="empty" id="thumbs-empty">No pages yet.</div>
+          </div>
+          <div class="status" id="status" aria-live="polite"></div>
+          <div class="row">
+            <button class="btn primary" id="analyze" disabled>Make my 3D guide</button>
+            <button class="btn" id="stop" hidden>Stop</button>
+            <button class="btn" id="clear" disabled>Clear pages</button>
+          </div>
+          </div>
+        </div>
+        <div class="card" id="tips-card">
+          <h2>Tips for a good scan</h2>
+          <ul class="tips">
+            <li>Lay the manual flat in good light, with no shadows on the drawings.</li>
+            <li>Fill the frame with one page, phone held straight above it.</li>
+            <li>Include the parts and hardware pages. They give the part letters and counts.</li>
+            <li>Pages can be in any order. Duplicates are fine.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LEGAL ===== -->
+  <section id="view-legal" hidden>
+    <article class="narrow card prose" id="legal"></article>
+  </section>
+
+  <!-- ===== NOT FOUND / ERRORS ===== -->
+  <section id="view-msg" hidden>
+    <div class="narrow card"><h1 class="h1s" id="msg-t"></h1><p class="muted" id="msg-d"></p><div class="row" id="msg-a"></div></div>
+  </section>
+
   <!-- ===== BUILD ===== -->
   <section id="view-build" hidden>
+    <a class="back" id="build-back" href="#/app">← My guides</a>
     <div class="layout">
       <div class="stage-card" id="stage-card">
         <canvas id="stage" aria-label="3D view of the furniture at the current step. Drag to turn, pinch to zoom, tap a part to identify it."></canvas>
@@ -76,14 +238,16 @@
         </div>
       </div>
       <div class="side">
-        <div class="product"><h2 id="p-name"></h2><div class="meta" id="p-meta"></div></div>
-        <div class="progress" id="progress" aria-label="Steps"></div>
+        <div class="product"><span class="tag" id="mode-tag" hidden>Example</span><h1 id="p-name"></h1><div class="meta" id="p-meta"></div></div>
+        <div class="progress" id="progress" aria-hidden="true"></div>
         <article class="card" id="step"></article>
-        <div class="nav"><button class="btn" id="prev">← Back</button><button class="btn primary" id="next">Next step →</button></div>
+        <p class="sr" id="sr-step" aria-live="polite"></p>
+        <div class="nav"><button class="btn" id="prev">← Back</button><span class="nav-n" id="nav-n" aria-hidden="true"></span><button class="btn primary" id="next">Next step →</button></div>
         <div class="card ask" id="ask">
-          <p class="lbl" style="margin:0">Stuck on this step?</p>
-          <form id="ask-form"><input id="ask-input" placeholder="e.g. Which way does the hole face?" autocomplete="off"><button class="btn primary" type="submit" id="ask-btn">Ask</button></form>
-          <div class="answer" id="ask-out" hidden></div>
+          <p class="lbl" style="margin:0" id="ask-h">Stuck on this step?</p>
+          <p class="muted ask-signin" id="ask-signin" hidden><a href="#/signin" id="ask-signin-link">Sign in</a> to ask a question about this step.</p>
+          <form id="ask-form"><input id="ask-input" aria-labelledby="ask-h" maxlength="500" placeholder="e.g. Which way does the hole face?" autocomplete="off"><button class="btn primary" type="submit" id="ask-btn">Ask</button></form>
+          <div class="answer" id="ask-out" aria-live="polite" hidden></div>
         </div>
         <section class="card">
           <h2>Parts in the box</h2>
@@ -93,6 +257,13 @@
       </div>
     </div>
   </section>
+</main>
+
+  <footer class="foot" id="foot">
+    <a class="brand small" href="#/" aria-label="Buildit home"><svg class="mark" width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><circle cx="20" cy="28" r="15" fill="#FFC400"/><path d="M7 42L29 20a3 3 0 0 1 4.2 0L42 28.8" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linejoin="round"/></svg><span class="name">Buildit</span></a>
+    <span class="f-note">Independent, not connected with any furniture brand. © 2026</span>
+    <nav aria-label="Legal"><a href="#/privacy">Privacy</a><a href="#/imprint">Imprint</a></nav>
+  </footer>
 </div>
 
 <div class="overlay" id="ov" hidden>

@@ -1,8 +1,12 @@
 // The build screen: 3D stage + step card + parts bench.
 import { Viewer } from './viewer/Viewer.js';
+import { hardwareReady } from './viewer/parts3d.js';
 import { PANEL, firstUse } from './guide.js';
 import { checkGuide } from './check.js';
 import { openActual, hasProfile } from './actualSize.js';
+import { manualPage, pageNumber, hasManual } from './manual.js';
+import { api } from './api.js';
+import { currentUser } from './account.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,11 +27,17 @@ function sizeText(p) {
   return '';
 }
 
+let modelsLoaded = false;
 export function openGuide(g) {
-  guide = g; cur = 0; first = firstUse(g);
+  // the hardware models load once (a small file); the first guide waits for them, at most a moment
+  if (!modelsLoaded) { hardwareReady.then(() => { modelsLoaded = true; openGuide(g); }); return; }
+  guide = g; first = firstUse(g);
+  // carry on where you stopped last time
+  cur = 0; try { const s = parseInt(localStorage.getItem('bw-step-' + g.id), 10); if (s > 0 && s <= g.steps.length) cur = s; } catch (e) { /* storage blocked */ }
   try { issues = checkGuide(g).filter(i => i.level !== 'info'); } catch (e) { issues = []; console.warn('Guide check failed', e); }
   if (!viewer) {
     viewer = new Viewer($('stage'), $('labels'), { colors: colors(), reducedMotion: RM });
+    if (import.meta.env.DEV) window.builditViewer = viewer; // for the performance and screenshot tests
     viewer.onPick = part => (part ? showInfo(part) : ($('info').hidden = true));
     $('stage').addEventListener('pointerdown', () => ($('hint').hidden = true), { once: true });
     matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => viewer.setColors(colors()));
@@ -35,13 +45,15 @@ export function openGuide(g) {
   viewer.resize();
   viewer.load(g);
   thumbs = viewer.thumbnails();
-  $('p-name').textContent = g.product;
+  $('p-name').textContent = g.example ? g.product.replace(/\s*\(example\)\s*$/i, '') : g.product;
   const m = [`${g.steps.length} steps`];
   if (g.time_minutes) m.push(`about ${g.time_minutes} min`);
   m.push(g.people >= 2 ? '2 people needed' : '1 person');
   g.tools.forEach(t => m.push(t));
   $('p-meta').innerHTML = m.map(t => `<span>${esc(t)}</span>`).join('');
   $('mode-tag').hidden = !g.example;
+  const signedIn = !!currentUser();
+  $('ask-signin').hidden = signedIn; $('ask-form').hidden = !signedIn;
   render();
 }
 
@@ -57,13 +69,15 @@ function checkBox(step) {
 
 function render() {
   const N = guide.steps.length, s = cur > 0 ? guide.steps[cur - 1] : null;
-  $('progress').innerHTML = Array.from({ length: N + 1 }, (_, i) => `<button class="${i < cur ? 'done' : i === cur ? 'cur' : ''}" data-i="${i}" aria-label="${i === 0 ? 'Parts check' : 'Step ' + i}"></button>`).join('');
+  // a picture of progress you can also tap; keyboard users use Back/Next and the arrow keys, so the dots are not tab stops
+  $('progress').innerHTML = Array.from({ length: N + 1 }, (_, i) => `<button tabindex="-1" class="${i < cur ? 'done' : i === cur ? 'cur' : ''}" data-i="${i}"${i === cur ? ' aria-current="step"' : ''}></button>`).join('');
   if (!s) {
     $('step').innerHTML = `<div class="step-head"><div class="num">0<small>/${N}</small></div><h2>Check your parts</h2></div>
       <p class="instr">Unpack everything and lay it out. Match every board and bag to the pictures below. Tap a part in 3D to see its letter.</p>
       <div class="callout tip">${ICON_TIP}<span>Keep the hardware bags closed until a step asks for them. Small parts roll away.</span></div>
       ${checkBox(0)}`;
   } else {
+    const pn = hasManual(guide) ? pageNumber(s.page) : null;
     // a step the automatic check flags is never shown as "read clearly"
     const conf = s.confidence === 'high' && issues.some(i => i.step === cur) ? 'medium' : s.confidence;
     const confColor = { high: 'var(--ok)', medium: 'var(--accent)', low: 'var(--warn)' }[conf];
@@ -75,17 +89,36 @@ function render() {
       ${s.warn ? `<div class="callout warn">${ICON_WARN}<span>${esc(s.warn)}</span></div>` : ''}
       ${s.tip ? `<div class="callout tip">${ICON_TIP}<span>${esc(s.tip)}</span></div>` : ''}
       ${checkBox(cur)}
-      ${guide.example ? '' : `<div class="conf"><i style="background:${confColor}"></i>${confText}${s.page ? ` · manual page ${esc(s.page)}` : ''}</div>`}`;
+      ${guide.example ? '' : `<div class="conf"><i style="background:${confColor}"></i>${confText}${s.page && !pn ? ` · manual page ${esc(s.page)}` : ''}</div>`}
+      ${pn ? `<details class="mpage" id="mpage"${pageOpen ? ' open' : ''}><summary>Compare with the manual · page ${pn}</summary><a target="_blank" rel="noopener"><img alt="Manual page ${pn}"></a></details>` : ''}`;
+    showPage(pn);
   }
   $('prev').disabled = cur === 0;
   $('next').textContent = cur === 0 ? 'Start building →' : cur === N ? 'Start over' : 'Next step →';
   $('hud').textContent = cur === 0 ? 'Parts check' : `Step ${cur} of ${N}`;
+  $('sr-step').textContent = cur === 0 ? 'Parts check' : `Step ${cur} of ${N}: ${s.title}`;
+  $('nav-n').textContent = cur === 0 ? `0/${N}` : `${cur}/${N}`;
   $('hud2').hidden = cur === 0;
   $('info').hidden = true; $('ask-out').hidden = true;
   viewer.setStep(cur);
   $('b-zoom').hidden = !viewer.hasDetail(); $('b-zoom').setAttribute('aria-pressed', 'true');
   renderBench(s);
   try { if (guide.id) localStorage.setItem('bw-step-' + guide.id, cur); } catch (e) { /* ignore */ }
+}
+
+// the manual page next to the step: stays open from step to step once opened
+let pageOpen = false;
+function showPage(n) {
+  const el = $('mpage');
+  if (!el) return;
+  const fill = async () => {
+    const url = await manualPage(guide, n);
+    if ($('mpage') !== el) return; // moved on to another step meanwhile
+    const img = el.querySelector('img'), a = el.querySelector('a');
+    if (url) { img.src = url; a.href = url; } else el.querySelector('summary').textContent = `Manual page ${n} is not available`;
+  };
+  el.addEventListener('toggle', () => { pageOpen = el.open; if (el.open) fill(); });
+  if (el.open) fill();
 }
 
 function renderBench(s) {
@@ -138,16 +171,13 @@ $('ask-form').addEventListener('submit', async e => {
   e.preventDefault();
   const q = $('ask-input').value.trim(); if (!q || !guide) return;
   const out = $('ask-out'); out.hidden = false; out.textContent = 'Thinking…'; $('ask-btn').disabled = true;
-  const s = guide.steps[cur - 1];
   try {
-    const r = await fetch('/api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-      question: q, product: guide.product, step_number: cur, total_steps: guide.steps.length,
-      step: s ? { title: s.title, text: s.text, tip: s.tip, warn: s.warn, need: s.need.map(([id, n]) => ({ id, qty: n, name: guide.parts[id]?.name })) } : 'Parts check before building',
-      previous: guide.steps[cur - 2]?.text || null, next: guide.steps[cur]?.text || null }) });
-    const j = await r.json();
-    out.textContent = r.ok ? j.answer : j.error || 'Could not get an answer.';
-  } catch (err) { out.textContent = 'Could not reach the Buildit server. Is it running?'; }
+    const r = await api('/api/ask', { method: 'POST', body: { guide: guide.id, step: cur, question: q } });
+    out.textContent = (await r.json()).answer;
+  } catch (err) { out.textContent = err.message || 'Could not get an answer.'; }
   finally { $('ask-btn').disabled = false; }
 });
 
+// the 3D view draws only while the build screen is open
+export function setBuildActive(v) { if (viewer) viewer.paused = !v; }
 export function onBuildShown() { viewer?.resize(); viewer && viewer.goCam(true); }
