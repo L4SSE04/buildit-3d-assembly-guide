@@ -26,3 +26,6 @@ skills-lock.json
 
 # screen recordings
 *.mov
+
+# personal log of fixes and improvements during the course
+IMPROVEMENTS.md
