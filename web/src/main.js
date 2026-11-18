@@ -70,7 +70,8 @@ async function route() {
       const g = await loadGuide(id);
       if (n !== routeNo) return; // the visitor moved on while it loaded
       show('build', `${g.product} · Buildit`);
-      $('build-back').textContent = user ? '← My guides' : '← Home';
+      const back = user ? 'My guides' : 'Home';
+      $('build-back').setAttribute('aria-label', back); $('build-back').title = back;
       $('build-back').href = user ? '#/app' : '#/';
       openGuide(g);
     } catch (e) {

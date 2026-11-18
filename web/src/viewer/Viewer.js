@@ -35,27 +35,55 @@ export class Viewer {
     this.root = new THREE.Group(); this.root.scale.setScalar(0.001); S.add(this.root);
     this.M = makeMaterials(colors);
 
+    // Camera: drag turns; right-drag, middle-drag or Shift/Ctrl/Cmd-drag moves (pans); the wheel, a trackpad scroll or
+    // pinch zooms toward the point under the pointer; two fingers on a touch screen pinch and move; double-click centres.
     const C = this.ctrl = new OrbitControls(this.cam, canvas);
-    C.enableDamping = true; C.dampingFactor = 0.09; C.maxPolarAngle = PI * 0.56; C.minDistance = 0.05; C.maxDistance = 8;
-    C.addEventListener('start', () => { this.tween = null; });
+    C.enableDamping = true; C.dampingFactor = 0.12; C.rotateSpeed = 0.85; C.panSpeed = 1;
+    C.maxPolarAngle = PI * 0.56; C.minDistance = 0.05; C.maxDistance = 8;
+    C.enableZoom = false; // our own zoom below: toward the pointer and smooth on mice and trackpads alike
+    C.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN };
+    C.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+    C.addEventListener('start', () => { this.tween = null; this.moved = true; canvas.classList.add('dragging'); this.onMove?.(); });
+    C.addEventListener('end', () => canvas.classList.remove('dragging'));
+    this.moved = false; this.zoomGoal = null; this.insets = { top: 0, right: 0, bottom: 0, left: 0 };
+    canvas.addEventListener('wheel', e => {
+      if (!C.enabled) return; // the landing page preview lets the page scroll
+      e.preventDefault();
+      const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+      // a trackpad pinch arrives as a ctrl+wheel with small steps; a mouse notch is about 100 px
+      const f = Math.exp(Math.max(-150, Math.min(150, px)) * (e.ctrlKey ? 0.012 : 0.0024));
+      this.zoomBy(f, e.clientX, e.clientY);
+    }, { passive: false });
+    // Shift shows the "move" cursor, because Shift-drag pans
+    const shift = e => canvas.classList.toggle('panning', e.shiftKey || e.ctrlKey || e.metaKey);
+    addEventListener('keydown', shift); addEventListener('keyup', shift);
 
-    // tap to identify
+    // tap to identify; double-click (or double-tap) to turn around the point you clicked
     const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
-    canvas.addEventListener('pointerdown', e => (down = [e.clientX, e.clientY]));
-    canvas.addEventListener('pointerup', e => {
-      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+    const hitAt = (x, y) => {
       const r = canvas.getBoundingClientRect();
-      ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ptr.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ptr, this.cam);
       for (const h of ray.intersectObjects(this.root.children, true)) {
         if (!h.object.isMesh) continue;
         let o = h.object; while (o && !o.userData.obj) o = o.parent;
-        if (o && o.visible && o.userData.obj.part) { this.onPick?.(o.userData.obj.part); return; }
+        if (o && o.visible && o.userData.obj.part) return { obj: o.userData.obj, point: h.point };
       }
-      this.onPick?.(null);
+      return null;
+    };
+    canvas.addEventListener('pointerdown', e => (down = [e.clientX, e.clientY, e.button]));
+    canvas.addEventListener('pointerup', e => {
+      if (!down || down[2] !== 0 || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+      this.onPick?.(hitAt(e.clientX, e.clientY)?.obj.part || null);
+    });
+    canvas.addEventListener('dblclick', e => {
+      if (!C.enabled) return;
+      const h = hitAt(e.clientX, e.clientY);
+      if (h) { this.centreOn(h.point, 0.7); this.moved = true; this.onMove?.(); }
     });
 
-    this.resize(); addEventListener('resize', () => { this.resize(); this.goCam(true); });
+    // a resize (phone toolbar showing or hiding, window dragged) keeps a view the user set up; otherwise it re-frames
+    this.resize(); addEventListener('resize', () => { this.resize(); if (this.guide && !this.moved) this.goCam(true); });
     // paused while its screen is hidden, so two viewers (landing page, build screen) never both draw
     this.paused = false;
     const loop = now => { requestAnimationFrame(loop); if (!this.paused) this.frame(now); };
@@ -87,6 +115,9 @@ export class Viewer {
       return { p, size, Q };
     });
     this.finalBox = finalBox.isEmpty() ? new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(600, 800, 300)) : finalBox;
+    // how far in and out the camera may go, from the size of the finished piece (metres; the scene is in mm × 0.001)
+    const R = this.finalBox.getSize(new THREE.Vector3()).length() / 2000;
+    this.ctrl.minDistance = Math.max(0.02, R * 0.04); this.ctrl.maxDistance = Math.max(3, R * 9);
 
     // floor layout in front of the finished piece
     const fb = this.finalBox, rowMax = Math.max(1800, (fb.max.x - fb.min.x) * 2.4);
@@ -245,14 +276,16 @@ export class Viewer {
       else {
         const seen = new Set();
         for (const o of [...moving, ...added]) {
-          if (seen.has(o.part)) continue; seen.add(o.part);
+          if (o.kind !== PANEL && seen.has(o.part)) continue; seen.add(o.part); // every board its own tag (both B boards)
           labels.push({ o, text: o.kind === PANEL ? o.part : `${o.part} ${this.guide.parts[o.part].name.toLowerCase()}`, isNew: true });
         }
         if (turning[0]) labels.push({ o: turning[0], text: '½ turn clockwise', isNew: true });
         const hosts = new Set(added.map(o => o.parent));
         hosts.forEach(k => { const p = this.byKey[k]; if (p && !seen.has(p.part)) { labels.push({ o: p, text: p.part }); seen.add(p.part); } });
       }
-      this.plan.push({ moving, added, turning, span, labels });
+      // boards this step works on (moved, or getting fittings): never hidden as loose
+      const involved = new Set([...moving, ...[...added, ...turning].map(o => this.byKey[o.parent]).filter(Boolean)]);
+      this.plan.push({ moving, added, turning, span, labels, involved });
     }
     // cameras need world positions: evaluate each step's end state
     for (let s = 0; s <= this.N; s++) {
@@ -287,8 +320,37 @@ export class Viewer {
       }
       const kfAt = o => o.kfs.find(k => k.s === s) || o.kfs[o.kfs.length - 1];
       if (s > 0 && pl.moving.length) cam.wide = this.camFrom(this.boxOf(placed), new THREE.Vector3(0.75, 0.48, 0.85).add(pl.moving.some(o => kfAt(o).P.z < this.finalBox.min.z + 10) ? new THREE.Vector3(-1.4, 0, -1.6) : new THREE.Vector3()), 1.05);
+      // the whole piece as it stands after this step (the landing preview keeps it in view at every step)
+      const standing = this.objs.filter(o => o.kind === PANEL && o.group.visible);
+      cam.whole = this.camFrom(this.boxOf(standing.length ? standing : all), new THREE.Vector3(0.75, 0.5, 0.95), 1.08);
       pl.cam = cam;
+      const view = this.wideOnly ? cam.whole : cam.detail || cam.wide; // the view the tags are first seen in
+      const eye = view.target.clone().add(view.dir.clone().multiplyScalar((view.r / Math.tan((this.cam.fov * PI) / 360)) * 1.05));
+      const boards = this.objs.filter(o => o.kind === PANEL && o.group.visible), boxes = new Map(boards.map(o => [o, new THREE.Box3().setFromObject(o.inner)]));
+      for (const l of pl.labels) if (l.o.kind === PANEL && l.o.group.visible) l.anchor = this.anchorFor(l.o, eye, boards.filter(x => x !== l.o).map(x => boxes.get(x)));
     }
+  }
+  /** Where on board o its tag goes (in o.group's own coordinates): the candidate spot the eye sees first and that is
+   *  furthest from other boards, so a side panel's tag does not sit where a shelf joins it and read as the shelf's. */
+  anchorFor(o, eye, others) {
+    const b = new THREE.Box3().setFromObject(o.inner), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
+    const ax = [0, 1, 2].sort((i, j) => s.getComponent(j) - s.getComponent(i));
+    const shown = m => { for (let x = m; x; x = x.parent) if (!x.visible) return false; return true; };
+    const ray = new THREE.Raycaster(), offs = [0, -0.3, 0.3];
+    let best = null;
+    for (const u of offs) for (const w of offs) {
+      const p = c.clone();
+      p.setComponent(ax[0], c.getComponent(ax[0]) + u * s.getComponent(ax[0]));
+      p.setComponent(ax[1], c.getComponent(ax[1]) + w * s.getComponent(ax[1]));
+      ray.set(eye, p.clone().sub(eye).normalize());
+      const hit = ray.intersectObjects(this.root.children, true).find(h => h.object.isMesh && shown(h.object));
+      let owner = hit?.object; while (owner && !owner.userData.obj) owner = owner.parent;
+      const seen = owner?.userData.obj === o;
+      const clear = others.length ? Math.min(0.25, ...others.map(ob => ob.distanceToPoint(p))) : 0.25;
+      const score = (seen ? 10 : 0) + clear * 8 - (Math.abs(u) + Math.abs(w)) * 0.5;
+      if (!best || score > best.score) best = { score, p };
+    }
+    return o.group.worldToLocal(best.p.clone());
   }
   boxOf(objs) { const b = new THREE.Box3(); objs.forEach(o => b.expandByObject(o.group)); return b.isEmpty() ? new THREE.Box3(new THREE.Vector3(-0.3, 0, -0.3), new THREE.Vector3(0.3, 0.6, 0.3)) : b; }
   camFrom(box, dir, pad, minR = 0.12) {
@@ -302,6 +364,8 @@ export class Viewer {
       let k = null; for (const f of o.kfs) if (f.s <= s) k = f;
       if (!k) { o.group.visible = false; continue; }
       const idx = o.kfs.indexOf(k), isNew = k.s === s && s > 0;
+      // hideLoose (landing preview): boards still lying on the floor are left out once building has started
+      if (this.hideLoose && s > 0 && idx === 0 && o.kind === PANEL && o.kfs.length > 1 && !this.plan?.[s]?.involved.has(o)) { o.group.visible = false; continue; }
       if (isNew && idx === 0 && o.parent && el < o.delay) { o.group.visible = false; continue; }
       o.group.visible = true;
       const p = !isNew || this.RM ? 1 : ease(Math.min(1, Math.max(0, (el - o.delay) / DUR)));
@@ -326,29 +390,36 @@ export class Viewer {
   frame(now) {
     if (!this.guide) return;
     const pl = this.plan[this.cur], cycle = DUR + pl.span + 2.2;
-    const el = this.RM ? Infinity : ((now - this.t0) / 1000) % cycle;
+    const el = this.RM || this.finished ? Infinity : ((now - this.t0) / 1000) % cycle;
     this.applyState(this.cur, el);
     const pulse = 0.5 + 0.5 * Math.sin(now / 260), acc = new THREE.Color(this.colors.accent);
-    const fresh = new Set([...pl.moving, ...pl.added, ...pl.turning]);
+    const fresh = this.finished ? new Set() : new Set([...pl.moving, ...pl.added, ...pl.turning]);
     for (const o of this.objs) {
       const glow = this.cur > 0 && fresh.has(o) ? (o.kind === PANEL ? 0.05 + 0.1 * pulse : 0.2 + 0.3 * pulse) : 0;
       const f = this.flash && this.flash.part === o.part && now < this.flash.until ? 0.55 * pulse + 0.2 : 0;
       o.mats.forEach(m => m.emissive.copy(acc).multiplyScalar(Math.max(glow, f) * (m.userData.glowGain ??= glowGain(m))));
     }
     if (this.tween) {
-      const p = Math.min(1, (now - this.tween.start) / 900), e = ease(p);
+      const p = Math.min(1, (now - this.tween.start) / (this.tween.ms || 900)), e = ease(p);
       this.cam.position.lerpVectors(this.tween.p0, this.tween.p1, e); this.ctrl.target.lerpVectors(this.tween.t0, this.tween.t1, e);
       if (p >= 1) this.tween = null;
+    }
+    // zoom glides: each frame takes a share of what is left, so a wheel notch eases in instead of jumping
+    if (this.zoomGoal) {
+      const z = this.zoomGoal, left = Math.log(z.f);
+      const step = Math.abs(left) < 0.003 || this.RM ? z.f : Math.exp(left * 0.28);
+      this.applyZoom(step, z.x, z.y); z.f /= step;
+      if (z.f === 1 || Math.abs(Math.log(z.f)) < 1e-4) this.zoomGoal = null;
     }
     this.ctrl.update(); this.R.render(this.S, this.cam); this.placeLabels();
   }
 
   /* ---------- controls ---------- */
   setStep(s, instant = false) {
-    this.cur = Math.max(0, Math.min(this.N, s)); this.detail = true; this.t0 = performance.now();
+    this.cur = Math.max(0, Math.min(this.N, s)); this.detail = true; this.finished = false; this.t0 = performance.now();
     this.buildLabels(); this.goCam(instant);
   }
-  hasDetail() { return !!this.plan?.[this.cur]?.cam.detail; }
+  hasDetail() { return !this.finished && !!this.plan?.[this.cur]?.cam.detail; }
   setDetail(v) { this.detail = v; this.goCam(false); }
   replay() { this.t0 = performance.now(); this.goCam(false); }
   setLabels(v) { this.showLabels = v; this.buildLabels(); }
@@ -359,37 +430,103 @@ export class Viewer {
     this.objs.forEach(o => { if (o.ghost) o.ghost.material.color.set(colors.accent); if (o.kind === PANEL) o.mats.forEach(m => m.map && m.color.set(colors.wood)); });
   }
   goCam(instant) {
-    const c = this.plan[this.cur].cam, v = this.detail && c.detail ? c.detail : c.wide;
-    const tv = Math.tan((this.cam.fov * PI) / 360), th = tv * (this.cam.aspect || 1);
+    const c = this.plan[this.cur].cam, v = this.finished && this.finCam ? this.finCam : this.wideOnly ? c.whole : this.detail && c.detail ? c.detail : c.wide;
+    const w = this.canvas.clientWidth || 1, h = this.canvas.clientHeight || 1, I = this.insets;
+    const fh = Math.max(0.35, (h - I.top - I.bottom) / h), fw = Math.max(0.35, (w - I.left - I.right) / w);
+    const tv = Math.tan((this.cam.fov * PI) / 360) * fh, th = Math.tan((this.cam.fov * PI) / 360) * (this.cam.aspect || 1) * fw;
     const dist = Math.max(v.r / tv, v.r / th) * 1.05;
     const P = v.target.clone().add(v.dir.clone().multiplyScalar(dist));
+    this.zoomGoal = null; this.moved = false;
     if (instant || this.RM) { this.cam.position.copy(P); this.ctrl.target.copy(v.target); this.tween = null; }
     else this.tween = { start: performance.now(), p0: this.cam.position.clone(), p1: P, t0: this.ctrl.target.clone(), t1: v.target.clone() };
   }
+  /** Zoom by factor f (<1 = closer) toward the screen point x, y (client pixels); the centre of the view if left out. */
+  zoomBy(f, x, y) {
+    const r = this.canvas.getBoundingClientRect();
+    if (x == null) { x = r.left + r.width / 2; y = r.top + r.height / 2; }
+    this.tween = null; this.moved = true; this.onMove?.();
+    const g = this.zoomGoal;
+    this.zoomGoal = { f: (g ? g.f : 1) * f, x, y };
+  }
+  applyZoom(f, x, y) {
+    const C = this.ctrl, cam = this.cam, r = this.canvas.getBoundingClientRect();
+    const d = cam.position.distanceTo(C.target);
+    const nd = Math.max(C.minDistance, Math.min(C.maxDistance, d * f));
+    if (!d || nd === d) return;
+    f = nd / d;
+    // the point under the pointer, at the depth of the point we turn around: it stays under the pointer
+    const ndc = new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    const ray = new THREE.Raycaster(); ray.setFromCamera(ndc, cam);
+    const fwd = cam.getWorldDirection(new THREE.Vector3());
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(fwd, C.target);
+    const p = ray.ray.intersectPlane(plane, new THREE.Vector3()) || C.target.clone();
+    cam.position.sub(p).multiplyScalar(f).add(p);
+    C.target.sub(p).multiplyScalar(f).add(p);
+  }
+  /** Turn around point p from now on, gliding there; k < 1 also moves closer. */
+  centreOn(p, k = 1) {
+    const C = this.ctrl, off = this.cam.position.clone().sub(C.target);
+    const d = Math.max(C.minDistance, Math.min(C.maxDistance, off.length() * k));
+    this.zoomGoal = null;
+    this.tween = { start: performance.now(), ms: 600, p0: this.cam.position.clone(), p1: p.clone().add(off.setLength(d)), t0: C.target.clone(), t1: p.clone() };
+  }
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight; if (!w || !h) return;
-    this.R.setSize(w, h, false); this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+    this.R.setSize(w, h, false); this.cam.aspect = w / h;
+    // shiftX moves the picture sideways (a share of the width), e.g. to leave room for a caption over one side
+    // insets: px covered by controls on each side; the picture's centre moves to the middle of what is left
+    const I = this.insets, ox = w * (this.shiftX || 0) - (I.left - I.right) / 2, oy = -(I.top - I.bottom) / 2;
+    if (ox || oy) this.cam.setViewOffset(w, h, ox, oy, w, h); else this.cam.clearViewOffset();
+    this.cam.updateProjectionMatrix();
+  }
+  /** Px of the canvas covered by controls ({top, right, bottom, left}); camera framing keeps the model clear of them. */
+  setInsets(i) { this.insets = { top: 0, right: 0, bottom: 0, left: 0, ...i }; this.resize(); }
+  /** The finished piece from the front, slowly turning: no labels, nothing glowing. */
+  setFinished(instant = false) {
+    this.cur = this.N; this.finished = true; this.detail = false; this.t0 = performance.now();
+    this.applyState(this.N, Infinity); this.root.updateMatrixWorld(true);
+    const box = this.boxOf(this.objs.filter(o => o.group.visible && o.kind === PANEL));
+    this.finCam = this.camFrom(box, new THREE.Vector3(0.75, 0.5, 0.95), 1.08);
+    this.buildLabels(); this.goCam(instant);
   }
 
   /* ---------- labels ---------- */
   buildLabels() {
     this.labelsEl.innerHTML = ''; this.labelEls = [];
-    if (!this.showLabels || !this.plan) return;
+    if (!this.showLabels || !this.plan || this.finished) return;
     for (const l of this.plan[this.cur].labels) {
       const el = document.createElement('div');
       el.className = 'lab' + (l.isNew ? ' new' : '') + (l.big ? ' big' : ''); el.textContent = l.text;
-      this.labelsEl.append(el); this.labelEls.push({ el, o: l.o });
+      this.labelsEl.append(el); this.labelEls.push({ el, o: l.o, anchor: l.anchor });
     }
   }
   placeLabels() {
-    const w = this.canvas.clientWidth, h = this.canvas.clientHeight, v = new THREE.Vector3();
-    for (const { el, o } of this.labelEls || []) {
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight, v = new THREE.Vector3(), items = [];
+    for (const L of this.labelEls || []) {
+      const { el, o } = L;
       if (!o.group.visible) { el.hidden = true; continue; }
-      if (o.kind === PANEL) { const b = new THREE.Box3().setFromObject(o.inner); v.set((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2); }
+      if (L.anchor) v.copy(L.anchor).applyMatrix4(o.group.matrixWorld);
+      else if (o.kind === PANEL) new THREE.Box3().setFromObject(o.inner).getCenter(v);
       else o.group.getWorldPosition(v);
       v.project(this.cam);
       if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { el.hidden = true; continue; }
-      el.hidden = false; el.style.left = ((v.x + 1) / 2) * w + 'px'; el.style.top = ((1 - v.y) / 2) * h + 'px';
+      el.hidden = false; L.x = ((v.x + 1) / 2) * w; L.y = ((1 - v.y) / 2) * h;
+      if (!L.w) { L.w = el.offsetWidth; L.h = el.offsetHeight; }
+      items.push(L);
+    }
+    // tags never cover each other: one that would overlap a tag lower down is lifted, and its stem grows to its spot
+    items.sort((a, b) => b.y - a.y);
+    const placed = [];
+    for (const L of items) {
+      let lift = 0;
+      for (let k = 0; k < 8; k++) {
+        const bottom = L.y - 9 - lift, top = bottom - L.h, left = L.x - L.w / 2, right = L.x + L.w / 2;
+        const hit = placed.find(r => left < r.right + 4 && right > r.left - 4 && top < r.bottom + 4 && bottom > r.top - 4);
+        if (!hit) { placed.push({ left, right, top, bottom }); break; }
+        lift += bottom - hit.top + 4;
+      }
+      const dx = Math.min(0, w - 4 - (L.x + L.w / 2)) || Math.max(0, 4 - (L.x - L.w / 2));
+      L.el.style.left = L.x + 'px'; L.el.style.top = L.y + 'px'; L.el.style.setProperty('--lift', lift + 'px'); L.el.style.setProperty('--dx', dx + 'px');
     }
   }
 

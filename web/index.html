@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#FFC400">
+  <meta name="theme-color" content="#CDAD82">
   <title>Buildit · Flat-pack instructions in 3D</title>
   <meta name="description" content="Buildit turns a flat-pack furniture manual into a 3D guide: every board and screw labelled, every step animated, viewable from any side.">
   <meta property="og:title" content="Buildit · Flat-pack instructions in 3D">
@@ -16,7 +16,7 @@
 <div class="wrap">
   <header class="top">
     <a class="brand" href="#/" aria-label="Buildit home">
-      <svg class="mark" width="38" height="38" viewBox="0 0 48 48" aria-hidden="true"><circle class="disc" cx="20" cy="28" r="15" fill="#FFC400"/><path d="M7 42L29 20a3 3 0 0 1 4.2 0L42 28.8" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linejoin="round"/></svg>
+      <svg class="mark" width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><circle class="disc" cx="20" cy="28" r="15" fill="#FFC400"/><path d="M7 42L29 20a3 3 0 0 1 4.2 0L42 28.8" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linejoin="round"/></svg>
       <span class="name">Buildit</span>
     </a>
     <nav class="topnav" id="topnav" aria-label="Main">
@@ -46,70 +46,106 @@
     <div class="hero">
       <div class="hero-text">
         <h1>Build it right the first time.</h1>
-        <p class="lead">Photograph the paper manual that came in the box. Buildit turns its drawings into a 3D guide: each board and screw keeps the letter or number from your manual, and every step shows which parts to take, where they go and which way they face.</p>
+        <p class="lead">Photograph the paper manual that came in the box. Buildit turns its drawings into a 3D guide you can turn and zoom. Every board and screw keeps its letter or number from the manual, and each step shows which parts to take and where they go.</p>
         <div class="acts">
-          <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.500M11 1.500l6 5.500-6 5.500" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></a>
+          <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="18" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.5M11 1.5l6 5.5-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></a>
           <a class="btn big" id="cta-scan" href="#/signin">Get early access</a>
         </div>
         <p class="fine">The example is free and needs no account. Scanning your own manual opens soon.</p>
       </div>
       <figure class="stage" id="hero-stage">
+        <span class="ruler" aria-hidden="true"></span>
         <div class="model">
           <canvas id="hero-canvas" aria-hidden="true"></canvas>
           <div class="labels" id="hero-labels" aria-hidden="true"></div>
+          <p class="hs-num" id="hero-step" aria-hidden="true"></p>
+          <span class="hs-live" aria-hidden="true">Live example</span>
         </div>
-        <figcaption class="stage-info" aria-live="off">
+        <figcaption class="hero-cap" aria-live="off">
           <div class="prog" id="hero-prog" aria-hidden="true"></div>
-          <p class="si-step"><b id="hero-step">Parts check</b><span id="hero-title"></span></p>
-          <p class="si-need-h">Take these parts</p>
+          <p class="si-step" id="hero-title"></p>
           <ul class="si-parts" id="hero-parts"></ul>
+          <div class="bl-row"><p class="bl-name" id="hero-name">Bookcase 60 × 100 cm</p><p class="bl-facts" id="hero-facts"></p></div>
         </figcaption>
       </figure>
     </div>
 
-    <section class="band dark" aria-labelledby="feat-h">
-      <h2 id="feat-h" class="sr">What a guide gives you</h2>
-      <ul class="feats">
-        <li><h3>Every part labelled</h3><p>Part letters and counts come from your manual, with a picture of each board and fitting to hold your real parts against.</p></li>
-        <li><h3>Screws at actual size</h3><p>Lay a real screw on your phone screen to tell two similar ones apart. Calibrated once with a bank card.</p></li>
-        <li><h3>The manual page beside each step</h3><p>In guides made from your manual, open the original drawing next to the 3D view and compare the two.</p></li>
-        <li><h3>Ask when you're stuck</h3><p>Type a question about the step you're on and get a short, plain answer.</p></li>
-      </ul>
+    <section class="band contents" aria-labelledby="feat-h">
+      <div class="label">
+        <span class="ruler" aria-hidden="true"></span>
+        <div class="contents-head"><h2 id="feat-h">What's in our 3D guide</h2><a class="more" href="#/guide/example-bookcase">Try it on the example <svg class="arr" width="16" height="12" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.5M11 1.5l6 5.5-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></a></div>
+        <ul class="feats">
+          <li class="f-parts">
+            <h3>Every part labelled</h3><p>Same letters and numbers as your manual.</p>
+            <div class="pv" aria-hidden="true">
+              <div class="prow"><div class="npart"><span class="noimg" data-thumb="A"></span><code>A</code><span class="nm"><b>Side panel</b><small>1000 × 280 × 18 mm</small></span><span class="q">2×</span></div><span class="tick" aria-checked="true"><i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i></span></div>
+              <div class="prow"><div class="npart"><span class="noimg" data-thumb="102"></span><code>102</code><span class="nm"><b>Cam screw</b><small>Metal pin</small></span><span class="q">12×</span></div><span class="tick" aria-checked="false"><i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i></span></div>
+            </div>
+          </li>
+          <li class="f-size">
+            <h3>Screws at actual size</h3><p>Lay a real screw on the screen to check it.</p>
+            <div class="pv" aria-hidden="true"><div class="measure"><div class="true-size" id="feat-size"></div><span class="ruler mm"></span></div></div>
+          </li>
+          <li class="f-turn">
+            <h3>Turn it, zoom in</h3><p>See every step from your side.</p>
+            <div class="pv" aria-hidden="true"><span class="hint-line"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/></svg>Drag to turn</span><span class="zoom-demo"><span class="ibtn sq">−</span><span class="ibtn sq">+</span><span class="ibtn">Reset view</span></span></div>
+          </li>
+          <li class="f-new">
+            <h3>What's new is yellow</h3><p>Each step marks the parts it adds.</p>
+            <div class="pv" aria-hidden="true"><span class="tags-demo"><span class="tagdemo"><span class="lab">A</span></span><span class="tagdemo"><span class="lab new">C</span></span><span class="tagdemo"><span class="lab new">101 wooden dowel</span></span></span><span class="board-demo"></span></div>
+          </li>
+          <li class="f-page">
+            <h3>The manual page beside it</h3><p>In your own guides, check the original drawing.</p>
+            <div class="pv" aria-hidden="true"><span class="page-demo"><i></i><i></i><i></i></span><span class="mpage-demo">Compare with the manual<small>Page 6</small></span></div>
+          </li>
+          <li class="f-ask">
+            <h3>Ask when you're stuck</h3><p>A short, plain answer about your step.</p>
+            <div class="pv" aria-hidden="true"><span class="ask-demo"><span class="field-demo">Which side faces out?</span><span class="btn primary">Ask</span></span></div>
+          </li>
+        </ul>
+      </div>
     </section>
 
-    <section class="band" id="how" aria-labelledby="how-h">
+    <section class="band how" id="how" aria-labelledby="how-h">
       <h2 id="how-h">How it works</h2>
       <ol class="steps">
-        <li><span class="n" aria-hidden="true">1</span><h3>Photograph the pages</h3><p>Use your phone camera, one page at a time. Or upload the PDF from the maker's website.</p></li>
-        <li><span class="n" aria-hidden="true">2</span><h3>Buildit reads the drawings</h3><p>It finds every board and fitting and works out where each one goes. A long manual can take ten minutes or more.</p></li>
-        <li><span class="n" aria-hidden="true">3</span><h3>Build it step by step</h3><p>Each step plays in 3D. What's new is marked in yellow. Turn and zoom to see it from your side.</p></li>
+        <li><h3><span class="n" aria-hidden="true">1</span>Photograph the manual</h3><p>Page by page, or upload the PDF.</p><figure class="dia-box"><svg class="dia" viewBox="-118.4 -57.7 216 166" role="img" aria-label="A phone held over a page of the paper manual, taking a photo of it"><path class="t" d="M0 -1.5L72.7 40.5L-20.8 94.5L-93.5 52.5Z"/><path class="r" d="M72.7 42L72.7 40.5L-20.8 94.5L-20.8 96Z"/><path class="f" d="M-93.5 54L-20.8 96L-20.8 94.5L-93.5 52.5Z"/><path class="dw" d="M3.5 26.5L31.2 42.5L3.5 58.5L-24.2 42.5Z"/><path class="dw2" d="M3.5 26.5L3.5 58.5"/><path class="dw2" d="M31.2 42.5L-24.2 42.5"/><path class="ln" d="M-52 42.5L-3.5 70.5"/><path class="ln" d="M-60.6 47.5L-24.2 68.5"/><path class="dsh" d="M-10.4 -12L0 -1.5"/><path class="dsh" d="M-10.4 -12L72.7 40.5"/><path class="dsh" d="M-10.4 -12L-20.8 94.5"/><path class="dsh" d="M-10.4 -12L-93.5 52.5"/><path class="t" d="M1.7 -45.5L39.8 -23.5L-24.2 13.5L-62.4 -8.5Z"/><path class="r" d="M39.8 -19L39.8 -23.5L-24.2 13.5L-24.2 18Z"/><path class="f" d="M-62.4 -4L-24.2 18L-24.2 13.5L-62.4 -8.5Z"/><path class="scr" d="M1.7 -40.5L31.2 -23.5L-24.2 8.5L-53.7 -8.5Z"/><path class="scp" d="M0 -34.5L20.8 -22.5L-22.5 2.5L-43.3 -9.5Z"/></svg></figure></li>
+        <li><h3><span class="n" aria-hidden="true">2</span>Buildit reads it</h3><p>Every part placed in 3D. Big manuals take 10 minutes or more.</p><figure class="dia-box"><svg class="dia" viewBox="-118.4 -48 216 166" role="img" aria-label="Each flat drawing on the manual page rising up as a 3D board, tagged A, B and C"><path class="t" d="M0 -1.5L86.6 48.5L-20.8 110.5L-107.4 60.5Z"/><path class="r" d="M86.6 50L86.6 48.5L-20.8 110.5L-20.8 112Z"/><path class="f" d="M-107.4 62L-20.8 112L-20.8 110.5L-107.4 60.5Z"/><path class="dw" d="M-1.7 9.5L67.5 49.5L50.2 59.5L-19.1 19.5Z"/><path class="dw" d="M-31.2 26.5L10.4 50.5L-13.9 64.5L-55.4 40.5Z"/><path class="dw" d="M17.3 54.5L38.1 66.5L13.9 80.5L-6.9 68.5Z"/><path class="ln" d="M-69.3 52.5L-12.1 85.5"/><path class="ln" d="M-77.9 57.5L-38.1 80.5"/><path class="dsh" d="M-19.1 19.5L-19.1 -25"/><path class="dsh" d="M50.2 59.5L50.2 15"/><path class="dsh" d="M67.5 49.5L67.5 5"/><path class="dsh" d="M-55.4 40.5L-55.4 -4"/><path class="dsh" d="M-13.9 64.5L-13.9 20"/><path class="dsh" d="M10.4 50.5L10.4 6"/><path class="dsh" d="M-6.9 68.5L-6.9 24"/><path class="dsh" d="M13.9 80.5L13.9 36"/><path class="dsh" d="M38.1 66.5L38.1 22"/><path class="t" d="M-1.7 -41L67.5 -1L50.2 9L-19.1 -31Z"/><path class="r" d="M67.5 5L67.5 -1L50.2 9L50.2 15Z"/><path class="f" d="M-19.1 -25L50.2 15L50.2 9L-19.1 -31Z"/><path class="t" d="M-31.2 -24L10.4 0L-13.9 14L-55.4 -10Z"/><path class="r" d="M10.4 6L10.4 0L-13.9 14L-13.9 20Z"/><path class="f" d="M-55.4 -4L-13.9 20L-13.9 14L-55.4 -10Z"/><path class="t" d="M17.3 4L38.1 16L13.9 30L-6.9 18Z"/><path class="r" d="M38.1 22L38.1 16L13.9 30L13.9 36Z"/><path class="f" d="M-6.9 24L13.9 36L13.9 30L-6.9 18Z"/><g class="tg"><path d="M24.2 -16V-25"/><rect x="16.1" y="-42" width="16.2" height="17" rx="3"/><text x="24.2" y="-29.8">A</text></g><g class="tg"><path d="M-22.5 -5V-14"/><rect x="-30.6" y="-31" width="16.2" height="17" rx="3"/><text x="-22.5" y="-18.8">B</text></g><g class="tg"><path d="M15.6 17V8"/><rect x="7.5" y="-9" width="16.2" height="17" rx="3"/><text x="15.6" y="3.2">C</text></g></svg></figure></li>
+        <li><h3><span class="n" aria-hidden="true">3</span>Build step by step</h3><p>Tick off the parts, then follow each step.</p><figure class="dia-box"><svg class="dia" viewBox="-40.2 -107 216 166" role="img" aria-label="The bookcase in 3D with the new shelf C in yellow, next to a list of the step's parts with ticks"><path class="t" d="M0 -104L5.2 -101L-31.2 -80L-36.4 -83Z"/><path class="r" d="M5.2 3L5.2 -101L-31.2 -80L-31.2 24Z"/><path class="f" d="M-36.4 21L-31.2 24L-31.2 -80L-36.4 -83Z"/><path class="t" d="M5.2 -3L62.4 30L27.7 50L-29.4 17Z"/><path class="r" d="M62.4 36L62.4 30L27.7 50L27.7 56Z"/><path class="f" d="M-29.4 23L27.7 56L27.7 50L-29.4 17Z"/><path class="t nw" d="M5.2 -51L62.4 -18L27.7 2L-29.4 -31Z"/><path class="r nw" d="M62.4 -12L62.4 -18L27.7 2L27.7 8Z"/><path class="f nw" d="M-29.4 -25L27.7 8L27.7 2L-29.4 -31Z"/><path class="t" d="M5.2 -101L62.4 -68L27.7 -48L-29.4 -81Z"/><path class="r" d="M62.4 -62L62.4 -68L27.7 -48L27.7 -42Z"/><path class="f" d="M-29.4 -75L27.7 -42L27.7 -48L-29.4 -81Z"/><g class="tg"><path d="M-26.8 -59.5V-68.5"/><rect x="-34.9" y="-85.5" width="16.2" height="17" rx="3"/><text x="-26.8" y="-73.3">A</text></g><g class="tg new"><path d="M20.8 -22V-31"/><rect x="12.7" y="-48" width="16.2" height="17" rx="3"/><text x="20.8" y="-35.8">C</text></g><g class="ck on"><rect class="bx" x="96" y="-86" width="15" height="15" rx="2"/><path class="tk" d="M99.5 -78.2l3 3 5.2-6"/><rect class="id" x="118" y="-86.5" width="17.2" height="16" rx="2"/><text class="idt" x="123" y="-74.4">B</text><text class="qt" x="141.2" y="-74.4">2×</text></g><g class="ck on"><rect class="bx" x="96" y="-60" width="15" height="15" rx="2"/><path class="tk" d="M99.5 -52.2l3 3 5.2-6"/><rect class="id" x="118" y="-60.5" width="17.2" height="16" rx="2"/><text class="idt" x="123" y="-48.4">C</text><text class="qt" x="141.2" y="-48.4">1×</text></g><g class="ck"><rect class="bx" x="96" y="-34" width="15" height="15" rx="2"/><rect class="id" x="118" y="-34.5" width="31.6" height="16" rx="2"/><text class="idt" x="123" y="-22.4">102</text><text class="qt" x="155.6" y="-22.4">6×</text></g></svg></figure></li>
       </ol>
     </section>
 
-    <section class="band dark honest" aria-labelledby="honest-h">
-      <div>
+    <section class="band honest" aria-labelledby="honest-h">
+      <div class="honest-text">
         <h2 id="honest-h">Honest about mistakes</h2>
         <p>Reading drawings is hard, for people and for software. Buildit checks its own 3D model and marks the steps where it may be wrong. Keep the paper manual nearby and follow it when the two disagree.</p>
       </div>
       <figure class="demo">
-        <div class="callout check"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg><span>The 3D view may be wrong in this step. Follow the paper manual if they differ.</span></div>
+        <div class="label"><span class="ruler" aria-hidden="true"></span>
+          <div class="callout check"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg><span>The 3D view may be wrong in this step. Follow the paper manual if they differ.</span></div>
+        </div>
         <figcaption>What you see on a step it's unsure about.</figcaption>
       </figure>
     </section>
 
-    <section class="band" id="pricing" aria-labelledby="price-h">
-      <h2 id="price-h">Pricing</h2>
-      <p class="sub">No subscription. Paid scans open soon: you pay once per manual.</p>
-      <ul class="prices">
-        <li><div><h3>Ready-made guides <span class="soon">Coming soon</span></h3><p>A library of guides for popular furniture, each one checked by a person against the paper manual. No account needed. For now there is one example guide to try.</p></div><b>Free</b></li>
-        <li><div><h3>Your own manual, up to 16 pages <span class="soon">Opening soon</span></h3></div><b>£1.99</b></li>
-        <li><div><h3>Up to 32 pages</h3></div><b>£2.99</b></li>
-        <li><div><h3>Up to 60 pages</h3></div><b>£4.99</b></li>
-      </ul>
-      <p class="fine">Prices are planned and may change before launch. In euros: from €1.99. Your guide stays in your account; delete it any time.</p>
+    <section class="band pricing" id="pricing" aria-labelledby="price-h">
+      <div class="pricing-text">
+        <h2 id="price-h">Pricing</h2>
+        <p class="sub">No subscription. Paid scans open soon: you pay once per manual.</p>
+        <p class="fine">Prices are planned and may change before launch. In euros: from €1.99. Your guide stays in your account; delete it any time.</p>
+      </div>
+      <div class="label">
+        <span class="ruler" aria-hidden="true"></span>
+        <ul class="prices">
+          <li><div><h3>Ready-made guides <span class="soon">Coming soon</span></h3><p>A library of guides for popular furniture, each one checked by a person against the paper manual. No account needed. For now there is one example guide to try.</p></div><b>Free</b></li>
+          <li><div><h3>Your own manual, up to 16 pages <span class="soon">Opening soon</span></h3></div><b>£1.99</b></li>
+          <li><div><h3>Up to 32 pages</h3></div><b>£2.99</b></li>
+          <li><div><h3>Up to 60 pages</h3></div><b>£4.99</b></li>
+        </ul>
+      </div>
     </section>
 
-    <section class="band light" id="faq" aria-labelledby="faq-h">
+    <section class="band faqband" id="faq" aria-labelledby="faq-h">
       <h2 id="faq-h">Questions</h2>
       <div class="faq">
         <details><summary>Which furniture works?</summary><p>Flat-pack furniture that comes with a drawn, step-by-step manual: shelves, wardrobes, chests of drawers, desks and chairs. Most flat-pack brands draw their manuals the same way. Products with motors or electronics are not supported.</p></details>
@@ -124,7 +160,7 @@
     <section class="band closer" aria-labelledby="close-h">
       <h2 id="close-h">See it on a real build.</h2>
       <div class="acts">
-        <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.500M11 1.500l6 5.500-6 5.500" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></a>
+        <a class="btn primary big" href="#/guide/example-bookcase">Try the example build <svg class="arr" width="18" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.5M11 1.5l6 5.5-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></a>
         <a class="btn big" id="cta-scan2" href="#/signin">Get early access</a>
       </div>
     </section>
@@ -133,6 +169,7 @@
   <!-- ===== SIGN IN ===== -->
   <section id="view-signin" hidden>
     <div class="narrow card" id="signin-card">
+      <span class="ruler" aria-hidden="true"></span>
       <div id="si-form-box">
         <h1 class="h1s">Sign in</h1>
         <p class="muted">We'll email you a link to sign in. No password needed. New here? The same link creates your account.</p>
@@ -163,11 +200,13 @@
   <section id="view-home" hidden>
     <div class="home">
       <div class="card" id="guides-card">
+        <span class="ruler" aria-hidden="true"></span>
         <h2 id="guides-h">Your guides</h2>
         <div class="guides" id="guides"></div>
       </div>
       <div class="side-col">
         <div class="card" id="scan-card">
+          <span class="ruler" aria-hidden="true"></span>
           <h2>Scan a manual</h2>
           <div id="scan-closed" class="notice" hidden>
             <p><b>You're on the early-access list.</b> Scanning your own manual opens soon, and we'll email you once when it does. Meanwhile, the example guide shows how a finished guide works.</p>
@@ -199,6 +238,7 @@
           </div>
         </div>
         <div class="card" id="tips-card">
+          <span class="ruler" aria-hidden="true"></span>
           <h2>Tips for a good scan</h2>
           <ul class="tips">
             <li>Lay the manual flat in good light, with no shadows on the drawings.</li>
@@ -218,43 +258,63 @@
 
   <!-- ===== NOT FOUND / ERRORS ===== -->
   <section id="view-msg" hidden>
-    <div class="narrow card"><h1 class="h1s" id="msg-t"></h1><p class="muted" id="msg-d"></p><div class="row" id="msg-a"></div></div>
+    <div class="narrow card"><span class="ruler" aria-hidden="true"></span><h1 class="h1s" id="msg-t"></h1><p class="muted" id="msg-d"></p><div class="row" id="msg-a"></div></div>
   </section>
 
   <!-- ===== BUILD ===== -->
   <section id="view-build" hidden>
-    <a class="back" id="build-back" href="#/app">← My guides</a>
+    <div class="bbar">
+      <a class="bb-home" id="build-back" href="#/app" aria-label="My guides" title="My guides"><svg class="mark" width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><circle class="disc" cx="20" cy="28" r="15" fill="#FFC400"/><path d="M7 42L29 20a3 3 0 0 1 4.2 0L42 28.8" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linejoin="round"/></svg></a>
+      <div class="bb-prod"><h1 id="p-name"></h1><p class="bb-meta"><span class="tag" id="mode-tag" hidden>Example</span><span id="p-meta"></span></p></div>
+      <nav class="tabs" id="tabs" aria-label="Guide sections">
+        <button data-tab="parts">Parts</button><button data-tab="build">Build <span class="tn" id="nav-n"></span></button><button data-tab="done">Done</button>
+      </nav>
+      <div class="bb-acts">
+        <button class="ibtn" id="b-parts" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg><span>All parts</span></button>
+        <button class="ibtn sq" id="b-help" popovertarget="help" aria-label="How to move the 3D view" title="How to move the 3D view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg></button>
+      </div>
+    </div>
     <div class="layout">
       <div class="stage-card" id="stage-card">
-        <canvas id="stage" aria-label="3D view of the furniture at the current step. Drag to turn, pinch to zoom, tap a part to identify it."></canvas>
+        <span class="ruler" aria-hidden="true"></span>
+        <canvas id="stage" aria-label="3D view of the furniture at the current step. Drag to turn, scroll or pinch to zoom, right-drag or two fingers to move, tap a part to identify it."></canvas>
         <div class="labels" id="labels"></div>
-        <div class="hud"><span class="chip" id="hud">Parts check</span><span class="chip" id="hud2" hidden>Yellow = new in this step</span></div>
-        <div class="hint" id="hint">Drag to turn · pinch to zoom · tap a part</div>
+        <div class="hud"><p class="snum" id="hud">Parts</p><span class="legend" id="hud2"><i></i>New in this step</span></div>
         <div class="info" id="info" hidden></div>
+        <div class="coach" id="hint" role="note" hidden>
+          <ul class="coach-list" id="coach-list"></ul>
+          <button class="coach-x" id="coach-x" aria-label="Hide these tips"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
         <div class="tools">
-          <button class="tbtn" id="b-zoom" aria-pressed="true" hidden>Close-up</button>
-          <button class="tbtn" id="b-labels" aria-pressed="true">Labels</button>
-          <button class="tbtn" id="b-replay" aria-label="Replay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/></svg></button>
+          <button class="ibtn" id="b-replay" title="Replay (R)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/></svg><span>Replay</span></button>
+          <button class="ibtn" id="b-labels" aria-pressed="true" title="Part labels (L)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-7 7z"/><circle cx="7.5" cy="8.5" r="1.3" fill="currentColor"/></svg><span>Labels</span></button>
+          <button class="ibtn" id="b-zoom" aria-pressed="true" hidden title="Close-up of the small parts"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><span>Close-up</span></button>
+        </div>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button class="ibtn sq" id="z-out" aria-label="Zoom out" title="Zoom out (−)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <button class="ibtn sq" id="z-in" aria-label="Zoom in" title="Zoom in (+)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="ibtn" id="z-fit" title="Back to the step's view (0)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Reset view</span></button>
         </div>
       </div>
-      <div class="side">
-        <div class="product"><span class="tag" id="mode-tag" hidden>Example</span><h1 id="p-name"></h1><div class="meta" id="p-meta"></div></div>
-        <div class="progress" id="progress" aria-hidden="true"></div>
-        <article class="card" id="step"></article>
-        <p class="sr" id="sr-step" aria-live="polite"></p>
-        <div class="nav"><button class="btn" id="prev">← Back</button><span class="nav-n" id="nav-n" aria-hidden="true"></span><button class="btn primary" id="next">Next step →</button></div>
-        <div class="card ask" id="ask">
-          <p class="lbl" style="margin:0" id="ask-h">Stuck on this step?</p>
-          <p class="muted ask-signin" id="ask-signin" hidden><a href="#/signin" id="ask-signin-link">Sign in</a> to ask a question about this step.</p>
-          <form id="ask-form"><input id="ask-input" aria-labelledby="ask-h" maxlength="500" placeholder="e.g. Which way does the hole face?" autocomplete="off"><button class="btn primary" type="submit" id="ask-btn">Ask</button></form>
-          <div class="answer" id="ask-out" aria-live="polite" hidden></div>
+      <div class="side" id="side">
+        <span class="ruler" aria-hidden="true"></span>
+        <div class="side-body" id="side-body">
+          <div class="progress" id="progress" aria-hidden="true"></div>
+          <article id="step"></article>
+          <p class="sr" id="sr-step" aria-live="polite"></p>
+          <details class="ask" id="ask">
+            <summary><span id="ask-h">Stuck on this step?</span><small>Ask a question</small></summary>
+            <p class="muted ask-signin" id="ask-signin" hidden><a href="#/signin" id="ask-signin-link">Sign in</a> to ask a question about this step.</p>
+            <form id="ask-form"><input id="ask-input" aria-labelledby="ask-h" maxlength="500" placeholder="e.g. Which way does the hole face?" autocomplete="off"><button class="btn primary" type="submit" id="ask-btn">Ask</button></form>
+            <div class="answer" id="ask-out" aria-live="polite" hidden></div>
+          </details>
         </div>
-        <section class="card">
-          <h2>Parts in the box</h2>
-          <p class="muted" style="margin:-8px 0 0;font-size:14px">Hold a real part next to its picture. Tap a picture to find it in 3D.</p>
-          <div class="grid" id="bench"></div>
-        </section>
+        <div class="nav"><button class="btn sq" id="prev" aria-label="Back one step"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><button class="btn primary" id="next"><span id="next-t">Next step</span><svg class="arr" width="18" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 7h16.5M11 1.5l6 5.5-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button></div>
       </div>
+    </div>
+    <div class="help" id="help" popover>
+      <p class="help-h">Moving the 3D view</p>
+      <ul class="keys" id="help-list"></ul>
     </div>
   </section>
 </main>
@@ -266,13 +326,23 @@
   </footer>
 </div>
 
+<div class="overlay drawer" id="pd" hidden>
+  <div class="sheet parts-sheet" role="dialog" aria-modal="true" aria-labelledby="pd-t">
+    <span class="ruler" aria-hidden="true"></span>
+    <div class="sheet-head"><h2 id="pd-t">All parts</h2><button class="ibtn" id="pd-x">Close</button></div>
+    <p class="muted sheet-sub">Hold a real part next to its picture. Tap a picture to find it in 3D.</p>
+    <div class="grid" id="bench"></div>
+  </div>
+</div>
+
 <div class="overlay" id="ov" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ov-t">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h3 id="ov-t">Actual size</h3><button class="tbtn" id="ov-x">Close</button></div>
+    <span class="ruler" aria-hidden="true"></span>
+    <div class="sheet-head"><h2 id="ov-t">Actual size</h2><button class="ibtn" id="ov-x">Close</button></div>
     <p class="muted" style="margin:0" id="ov-d"></p>
-    <div class="ruler" id="ov-svg"></div>
+    <div class="ruler-box" id="ov-svg"></div>
     <div class="cal">
-      <span><b style="color:var(--fg)">Calibrate once:</b> hold a bank card against the box and slide until the widths match.</span>
+      <span><b>Calibrate once:</b> hold a bank card against the box and slide until the widths match.</span>
       <div class="cardbox" id="cardbox">bank card · 85.6 mm</div>
       <input type="range" id="cal" min="2.2" max="9" step="0.01" aria-label="Screen scale">
     </div>

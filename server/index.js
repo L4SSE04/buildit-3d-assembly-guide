@@ -23,7 +23,9 @@ const RAW = path.join(here, 'data', 'raw');
 const PAGES = path.join(here, 'data', 'pages'); // the manual each guide was made from, to show next to its steps
 const PORT = Number(process.env.PORT || 8787);
 const REPAIR = process.env.CHECK_REPAIR !== '0'; // second pass that fixes problems the automatic check finds
-const COMPARE = process.env.RENDER_COMPARE !== '0'; // third pass: the model compares pictures of the 3D model with the manual
+// third pass: the model compares pictures of the 3D model with the manual. Off unless RENDER_COMPARE=1: on 14 scans it
+// never corrected a real instruction error, and its pictures show the assembly too small to check (frames the loose parts too)
+const COMPARE = process.env.RENDER_COMPARE === '1';
 checkConfig();
 await mkdir(DATA, { recursive: true });
 

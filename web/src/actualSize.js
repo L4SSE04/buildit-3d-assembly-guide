@@ -31,6 +31,11 @@ function sized(part) {
   return null;
 }
 const profileFor = part => sized(part) || PROFILES[part.kind];
+/** The true-size side view of a part as an SVG string, at ppm screen pixels per millimetre (null if there is none). */
+export function profileSvg(part, ppm = 3.78) {
+  const P = profileFor(part); if (!P) return null;
+  return `<svg width="${P.w * ppm}" height="${P.h * ppm}" viewBox="0 0 ${P.w} ${P.h}" aria-hidden="true">${P.svg}</svg>`;
+}
 export const hasProfile = (kind, part) => !!(part ? profileFor(part) : PROFILES[kind] || ['washer', 'nut', 'allen_bolt'].includes(kind));
 
 let ppm = 3.78;
